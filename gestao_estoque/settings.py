@@ -160,21 +160,7 @@ JAZZMIN_SETTINGS = {
     "welcome_sign": "Bem-vindo ao painel de administração",
     "site_header": "Administração",
     "hide_models": ["inventory_management.room"],
-    "changeform_format": "single",
-    
-   "order_with_respect_to": [
-    "inventory_management",
-    "inventory_management.category",
-    "inventory_management.product",
-    "inventory_management.productunit",
-    "inventory_management.stocktransfer",
-    "inventory_management.building",
-    "inventory_management.hall",
-    "inventory_management.shelf",
-    "auth",
-    "auth.user",
-    "auth.group"
-],
+    "show_ui_builder": True,
     "topmenu_links": [
 
         {"name": "Home",  "url": "admin:index", "permissions": ["auth.view_user"]},
@@ -197,6 +183,7 @@ JAZZMIN_SETTINGS = {
         "inventory_management.hall": "fas fa-door-open",
         "inventory_management.shelf": "fas fa-box",
     },
+    "order_with_respect_to": ["inventory_management", "auth"],
 }
 
 JAZZMIN_UI_TWEAKS = {
@@ -219,6 +206,7 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_nav_compact_style": False,
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": True,
+    "theme": "pulse",
     "dark_mode_theme": None,
     "button_classes": {
         "primary": "btn-primary",

@@ -172,10 +172,4 @@ class RoomAdmin(admin.ModelAdmin):
     def has_change_permission(self, request):
         return False
 
-@admin.register(Hall)
-class HallAdmin(admin.ModelAdmin):
-    list_display = ('name',)
 
-@admin.register(Shelf)
-class ShelfAdmin(admin.ModelAdmin):
-    list_display = ('name',)
