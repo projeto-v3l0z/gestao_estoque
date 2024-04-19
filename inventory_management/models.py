@@ -155,8 +155,7 @@ class Building(models.Model):
 class Room(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField("Nome da Sala", max_length=100)
-    hall = models.CharField("Corredor", max_length=100, default="N/A")
-    shelf = models.CharField("Prateleira", max_length=100, default="N/A")
+    hall = models.ForeignKey('inventory_management.Hall', on_delete=models.CASCADE, verbose_name="Corredor")
     building = models.ForeignKey(Building, on_delete=models.CASCADE, verbose_name="Prédio")
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
 
@@ -174,3 +173,39 @@ class Room(models.Model):
         verbose_name_plural = "Salas"
         verbose_name = "Sala"
         ordering = ['building', 'name']
+        
+        
+class Hall(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField("Corredor", max_length=100)
+    shelf = models.ForeignKey('inventory_management.Shelf', default=1, on_delete=models.CASCADE, verbose_name="Prateleira")
+    slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.id)
+        super(Hall, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Corredor - {self.name} - Prateleira {self.shelf}'
+
+    class Meta:
+        verbose_name_plural = "Corredores"
+        verbose_name = "Corredor"
+        ordering = ['name']
+        
+class Shelf(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField("Prateleira", max_length=100)
+    slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.id)
+        super(Shelf, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return f'{self.name}'
+
+    class Meta:
+        verbose_name_plural = "Prateleiras"
+        verbose_name = "Prateleira"
+        ordering = ['name']
