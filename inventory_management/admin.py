@@ -25,6 +25,11 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ('name',)
     list_filter = ('category',)
     
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if not obj and form.base_fields.get('color'):
+            form.base_fields['color'].widget = forms.HiddenInput()
+        return form
 
 def download_qr_codes(modeladmin, request, queryset):
     item_ids = ','.join(str(item.id) for item in queryset)
@@ -52,21 +57,16 @@ write_on_products.short_description = "Retornar ao estoque os produtos seleciona
 @admin.register(ProductUnit)
 class ProductUnitAdmin(admin.ModelAdmin):
     list_display = ('product', 'location', 'meters' ,'purchase_date', 'write_off')
-    search_fields = ('product__name', 'location__name', 'id')
+    search_fields = ('product__name', 'location__name', 'id', 'code')
     list_filter = ('product' ,'purchase_date', 'location', 'write_off')
     actions = [download_qr_codes, write_off_products, write_on_products]
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
-        if obj and obj.type == 'liso':
-            form.base_fields['pattern'].widget = forms.HiddenInput()
-            form.base_fields['quantity'].widget = forms.HiddenInput()
-        elif obj and obj.type == 'estampado':
-            form.base_fields['color'].widget = forms.HiddenInput()
+        if obj:
             form.base_fields['quantity'].widget = forms.HiddenInput()
         else:
             pass
-        
         return form
 
     def get_readonly_fields(self, request, obj=None):
@@ -157,4 +157,12 @@ class HallAdmin(admin.ModelAdmin):
 
 @admin.register(Shelf)
 class ShelfAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(Color)
+class ColorAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(Pattern)
+class PatternAdmin(admin.ModelAdmin):
     pass

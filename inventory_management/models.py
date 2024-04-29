@@ -28,7 +28,39 @@ class Category(models.Model):
     def get_absolute_url(self):
         return reverse('inventory_management:category_items', kwargs={'slug': self.slug})
 
+class Color(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField("Nome da Cor", max_length=100)
+    slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
 
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.name)
+        super(Color, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = "Cores"
+        verbose_name = "Cor"
+        
+class Pattern(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField("Nome da Estampa", max_length=100)
+    slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.name)
+        super(Pattern, self).save(*args, **kwargs)
+    
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = "Estampas"
+        verbose_name = "Estampa"
+        
+        
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     category = models.ForeignKey('inventory_management.Category', on_delete=models.CASCADE, verbose_name="Categoria")
@@ -37,6 +69,21 @@ class Product(models.Model):
     price = models.DecimalField("Preço", max_digits=10, decimal_places=2)
     image = models.ImageField("Imagem", upload_to='product_images', blank=True, null=True)
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
+    color = models.ForeignKey('inventory_management.Color', on_delete=models.CASCADE, verbose_name="Cor", blank=True, null=True, editable=False)
+    pattern = models.ForeignKey('inventory_management.Pattern', on_delete=models.CASCADE, verbose_name="Estampa", blank=True, null=True, editable=False)
+
+    def __init__(self, *args, **kwargs):
+        super(Product, self).__init__(*args, **kwargs)
+        if "estampado" in self.name.lower():
+            self.set_editable_fields(color=False, pattern=True)
+        elif "liso" in self.name.lower():
+            self.set_editable_fields(color=True, pattern=False)
+        else:
+            self.set_editable_fields(color=False, pattern=False)
+
+    def set_editable_fields(self, color, pattern):
+        self._meta.get_field('color').editable = color
+        self._meta.get_field('pattern').editable = pattern
 
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)
@@ -57,14 +104,10 @@ class Product(models.Model):
     
     def get_absolute_url(self):
         return reverse('inventory_management:product_detail', kwargs={'category_slug':self.category.slug, 'slug': self.slug})
+    
 
 
 class ProductUnit(models.Model):
-    TYPE_CHOICES = (
-        ('none', 'Nenhum'),
-        ('liso', 'Liso'),
-        ('estampado', 'Estampado'),
-    )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product = models.ForeignKey("Product", on_delete=models.CASCADE, verbose_name="Produto")
     location = models.ForeignKey('inventory_management.Shelf', on_delete=models.CASCADE, verbose_name="Localização")
@@ -74,9 +117,6 @@ class ProductUnit(models.Model):
     code = models.CharField("Código", max_length=255, null=True, blank=True)
     ncm = models.CharField("NCM", max_length=8, null=True, blank=True)
     write_off = models.BooleanField("Baixado?", default=False)
-    type = models.CharField("Tipo", max_length=10, choices=TYPE_CHOICES, default='none')
-    color = models.CharField("Cor", max_length=50, null=True, blank=True )
-    pattern = models.CharField("Estampa", max_length=50, null=True, blank=True)
     modified = models.DateTimeField("Modificado", auto_now=True)
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
 
