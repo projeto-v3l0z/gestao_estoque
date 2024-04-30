@@ -21,14 +21,25 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'quantity')
+    list_display = ('name', 'category', 'quantity', 'custom_display')
     search_fields = ('name',)
     list_filter = ('category',)
+    
+    def custom_display(self, obj):
+        if "liso" in obj.name.lower():
+            return obj.color
+        elif "estampado" in obj.name.lower():
+            return obj.pattern 
+        else:
+            return "N/A"
+    custom_display.short_description = "Liso/Estampado" 
     
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
         if not obj and form.base_fields.get('color'):
             form.base_fields['color'].widget = forms.HiddenInput()
+        elif not obj and form.base_fields.get('pattern'):
+            form.base_fields['pattern'].widget = forms.HiddenInput()
         return form
 
 def download_qr_codes(modeladmin, request, queryset):
