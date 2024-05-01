@@ -49,19 +49,10 @@ class ProductDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         product = self.get_object()
-        
-        write_off = self.request.GET.get('write_off')
         product_units = product.productunit_set.all() 
-        if write_off == 'baixados':
-            product_units = product_units.filter(write_off=True)
-        elif write_off == 'todos':
-            pass 
-        else:
-            product_units = product_units.filter(write_off=False)
         
         total_meters = product_units.aggregate(total_meters=Sum('meters'))['total_meters']
         context['total_meters'] = total_meters if total_meters else 0
-        
         context['product_units'] = product_units 
             
         return context
@@ -69,9 +60,19 @@ class ProductDetailView(DetailView):
 class ProductUnitDetailView(DetailView):
     model = ProductUnit
     template_name = 'product_unit_detail.html'
+    
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        transfer_history = StockTransfer.objects.filter(product_unit=self.get_object())
+        write_offs = StockWriteOff.objects.filter(product_unit=self.get_object())
+        repositions = StockReposition.objects.filter(product_unit=self.get_object())
+        
+        all_movements = list(transfer_history) + list(write_offs) + list(repositions)
+        all_movements.sort(key=lambda x: x.transfer_date if isinstance(x, StockTransfer) else (x.write_off_date if isinstance(x, StockWriteOff) else x.reposition_date), reverse=True)
+
+        context['movements'] = all_movements
         context['shelves'] = Shelf.objects.exclude(pk=self.get_object().location.id)
         return context
         

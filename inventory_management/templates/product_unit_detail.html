@@ -11,7 +11,7 @@
                 <strong>Localização atual:</strong> {{ object.location.full_adress }}
             </p>
         </div>
-    {% if object.stocktransfer_set.all or object.write_off %}
+    {% if object.stocktransfer_set.all or object.stockwriteoff_set.all %}
         <div class="col-12">
             <h2 class="mb-3">Movimentações</h2>
             <table class="table table-striped">
@@ -20,32 +20,41 @@
                         <th scope="col">Data</th>
                         <th scope="col">Origem</th>
                         <th scope="col">Destino</th>
+                        <th scope="col">Metros</th>
                         <th scope="col">Observações</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for transfer in object.stocktransfer_set.all %}
-                    <tr>
-                        <td>{{ transfer.transfer_date }}</td>
-                        <td>{{ transfer.origin }}</td>
-                        <td>{{ transfer.destination }}</td>
-                        <td>{{ transfer.observations }}</td>
-                    </tr>
+                    {% for movement in movements %}
+                        <tr>
+                            {% if movement.transfer_date %}
+                                <td>{{ movement.transfer_date }}</td>
+                                <td>{{ movement.origin }}</td>
+                                <td>{{ movement.destination }}</td>
+                                <td>{{movement.product_unit.meters}}</td> <!-- Coluna vazia para "Metros" em Transferências -->
+                                <td>{{ movement.observations }}</td>
+                            {% endif %}
+                            {% if movement.write_off_date %}
+                                <td>{{ movement.write_off_date }}</td>
+                                <td>{{ movement.product_unit.location }}</td>
+                                <td>Baixa</td>
+                                <td></td> <!-- Coluna vazia para "Metros" em Baixas -->
+                                <td>{{ movement.observations }}</td>
+                            {% endif %}
+                            {% if movement.reposition_date %}
+                                <td>{{ movement.reposition_date }}</td>
+                                <td></td> <!-- Coluna vazia para "Origem" em Reposições -->
+                                <td>{{ movement.product_unit.location }}</td>
+                                <td>{{ movement.meters }}</td>
+                                <td>{{ movement.observations }}</td>
+                            {% endif %}
+                        </tr>
                     {% endfor %}
-                    {% if object.write_off %}
-                    <tr>
-                        <td>{{ object.modified }}</td>
-                        <td>{{ object.location }}</td>
-                        <td>Baixa</td>
-                        <td>Baixa Realizada</td>
-                    </tr>
-                    {% endif %}
                 </tbody>
             </table>
         </div>
     </div>
     {% endif %}
-
     
     <div class="row justify-content-center align-items-center mt-4">
         <div id="qrcode" class="col-12 col-md-6 d-flex justify-content-center my-3"></div>
@@ -140,34 +149,12 @@
                         <textarea name="observations" id="observations" class="form-control"></textarea>
                     </div>
                     <div class="col-12 text-center">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-right"></i> Transferir</button>
+                        <button type="submit" class="btn btn-primary">Confirmar Transferência</button>
                     </div>
                 </form>
-            </div>            
-        </div> 
+            </div>
+        </div>
     {% endif %}
-</div>
-{% else %}
-<div class="container pb-5">
-    <div class="row justify-content-center align-items-center">
-        <div class="col-12 col-md-6">
-            <h1 class="mb-4">{{ object.product }}</h1>
-        </div>
-        {% if object.product.image %}
-        <div class="col-12 col-md-6">
-            <img src="{{ object.product.image.url }}" alt="{{ object.product.name }}" class="img-fluid">
-            <figcaption class="figure-caption text-center">
-                <h2>Preço</h2>
-                <p class="h5">R$ {{ object.product.price }}</p>
-            </figcaption>
-        </div>
-        {% endif %}
-    </div>
-    <div class="row justify-content-center align-items-center mt-4">
-        <div class="col-12 fs-5">
-            {{ object.product.description|linebreaks }}
-        </div>
-    </div>
 </div>
 {% endif %}
 {% endblock %}

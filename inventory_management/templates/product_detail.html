@@ -36,11 +36,7 @@
                             {{ item.product.name }} - {{ item.slug }}
                         </a>
                     </td>
-                    {% if item.write_off %}
-                        <td>Baixado</td>
-                    {% else %}
-                        <td>{{ item.location.full_adress }}</td>
-                    {% endif %}
+                    <td>{{ item.location }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

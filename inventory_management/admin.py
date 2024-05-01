@@ -50,27 +50,12 @@ def download_qr_codes(modeladmin, request, queryset):
 
 download_qr_codes.short_description = "Baixar QR Codes"
 
-
-def write_off_products(modeladmin, request, queryset):
-    for product_unit in queryset:
-        if not product_unit.write_off:
-            product_unit.write_off = True
-            product_unit.save()
-write_off_products.short_description = "Dar baixa em produtos selecionados"
-
-def write_on_products(modeladmin, request, queryset):
-    for product_unit in queryset:
-        if product_unit.write_off:
-            product_unit.write_off = False
-            product_unit.save()
-write_on_products.short_description = "Retornar ao estoque os produtos selecionados"
-
 @admin.register(ProductUnit)
 class ProductUnitAdmin(admin.ModelAdmin):
-    list_display = ('product', 'location', 'meters' ,'purchase_date', 'write_off')
+    list_display = ('product', 'location', 'meters' ,'purchase_date')
     search_fields = ('product__name', 'location__name', 'id', 'code')
-    list_filter = ('product' ,'purchase_date', 'location', 'write_off')
-    actions = [download_qr_codes, write_off_products, write_on_products]
+    list_filter = ('product' ,'purchase_date', 'location')
+    actions = [download_qr_codes]
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
@@ -177,3 +162,26 @@ class ColorAdmin(admin.ModelAdmin):
 @admin.register(Pattern)
 class PatternAdmin(admin.ModelAdmin):
     pass
+
+@admin.register(StockReposition)
+class StockRepositionAdmin(admin.ModelAdmin):
+    list_display = ('product_unit', 'reposition_date')
+    search_fields = ('product__name', 'quantity')
+    list_filter = ('reposition_date', 'product_unit')
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return self.readonly_fields + ('product_unit', 'reposition_date')
+        return self.readonly_fields
+    
+@admin.register(StockWriteOff)
+class StockWriteOffAdmin(admin.ModelAdmin):
+    list_display = ('product_unit', 'write_off_date')
+    search_fields = ('product__name', 'quantity')
+    list_filter = ('write_off_date', 'product_unit')
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return self.readonly_fields + ('product_unit', 'write_off_date')
+        return self.readonly_fields
+    

@@ -116,7 +116,6 @@ class ProductUnit(models.Model):
     meters = models.DecimalField("Metros", max_digits=10, decimal_places=2, null=False, blank=False)
     code = models.CharField("Código", max_length=255, null=True, blank=True)
     ncm = models.CharField("NCM", max_length=8, null=True, blank=True)
-    write_off = models.BooleanField("Baixado?", default=False)
     modified = models.DateTimeField("Modificado", auto_now=True)
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
 
@@ -124,18 +123,12 @@ class ProductUnit(models.Model):
         self.slug = slugify(self.id)
         super(ProductUnit, self).save(*args, **kwargs)
         for i in range(1, self.quantity):
-            ProductUnit.objects.create(product=self.product, location=self.location, purchase_date=self.purchase_date, meters=self.meters, ncm=self.ncm, type=self.type, color=self.color, pattern=self.pattern)
+            ProductUnit.objects.create(product=self.product, location=self.location, purchase_date=self.purchase_date, meters=self.meters, ncm=self.ncm)
 
         self.__class__.objects.filter(id=self.id).update(quantity=1)
 
 
     def clean(self):
-        if self.type == 'liso' and not self.color:
-            raise ValidationError("Preencha a cor.")
-
-        if self.type == 'estampado' and not self.pattern:
-            raise ValidationError("Preencha a estampa.")
-        
         if self.quantity < 1:
             raise ValidationError("A quantidade deve ser maior que 0.")
         
@@ -145,7 +138,7 @@ class ProductUnit(models.Model):
     class Meta:
         verbose_name_plural = "Unidades de Produto"
         verbose_name = "Unidade de Produto"
-        ordering = ['write_off', 'purchase_date', 'product']
+        ordering = ['purchase_date', 'product']
 
     def get_absolute_url(self):
         return reverse('inventory_management:product_unit_detail', kwargs={'category_slug':self.product.category.slug, 'product_slug':self.product.slug, 'slug': self.slug})
@@ -162,11 +155,11 @@ class StockTransfer(models.Model):
     def save(self, *args, **kwargs):
         if self.origin == self.destination:
             raise ValidationError("Origem e destino não podem ser iguais.")
-        if self.product_unit.write_off:
-            raise ValidationError("A unidade de produto foi baixada.")
         if self.product_unit.location != self.origin:
             raise ValidationError("A unidade de produto não está na origem.")
-        
+        if not self.origin:
+            self.origin = self.product_unit.location
+            
         self.product_unit.location = self.destination
         self.product_unit.save()
         super(StockTransfer, self).save(*args, **kwargs)
@@ -181,7 +174,53 @@ class StockTransfer(models.Model):
     def get_absolute_url(self):
         return reverse('inventory_management:product_unit_detail', kwargs={'category_slug':self.product_unit.product.category.slug, 'product_slug':self.product_unit.product.slug, 'slug': self.product_unit.slug})
 
+class StockWriteOff(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product_unit = models.ForeignKey(ProductUnit, on_delete=models.CASCADE, verbose_name="Unidade de Produto")
+    meters = models.DecimalField("Metros", max_digits=10, decimal_places=2, null=False, blank=False)
+    write_off_date = models.DateField("Data da Baixa")
+    observations = models.TextField("Observações", blank=True, null=True)
+    
+    def save(self, *args, **kwargs):
+        if self.meters > self.product_unit.meters:
+            raise ValidationError("A quantidade a ser baixada é maior que a quantidade disponível.")
+        self.product_unit.meters -= self.meters
+        self.product_unit.save()
+        super(StockWriteOff, self).save(*args, **kwargs)
 
+    def __str__(self):
+        return f"{self.product_unit.product.name} - {self.product_unit.location} - {self.write_off_date}"
+
+    class Meta:
+        verbose_name_plural = "Baixas de Estoque"
+        verbose_name = "Baixa de Estoque"
+
+    def get_absolute_url(self):
+        return reverse('inventory_management:product_unit_detail', kwargs={'category_slug':self.product_unit.product.category.slug, 'product_slug':self.product_unit.product.slug, 'slug': self.product_unit.slug})
+
+class StockReposition(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product_unit = models.ForeignKey(ProductUnit, on_delete=models.CASCADE, verbose_name="Unidade de Produto")
+    meters = models.DecimalField("Metros", max_digits=10, decimal_places=2, null=False, blank=False)
+    observations = models.TextField("Observações", blank=True, null=True)
+    reposition_date = models.DateField("Data da Reposição")
+    
+    def save(self, *args, **kwargs):
+        self.product_unit.meters += self.meters
+        self.product_unit.save()
+        super(StockReposition, self).save(*args, **kwargs)
+        
+    def __str__(self):
+        return f"{self.product_unit.product.name} - {self.product_unit.location} - {self.reposition_date}"
+    
+    class Meta:
+        verbose_name_plural = "Reposições de Estoque"
+        verbose_name = "Reposição de Estoque"
+    
+    def get_absolute_url(self):
+        return reverse('inventory_management:product_unit_detail', kwargs={'category_slug':self.product_unit.product.category.slug, 'product_slug':self.product_unit.product.slug, 'slug': self.product_unit.slug})
+    
+    
 class Building(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField("Nome do Prédio", max_length=100)
