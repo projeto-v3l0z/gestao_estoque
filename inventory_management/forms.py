@@ -13,4 +13,15 @@ class QRCodeForm(forms.Form):
 
 class DashboardFilterForm(forms.Form):
     product = forms.ModelChoiceField(queryset=Product.objects.all(), required=False, label="Produto")
-    building = forms.ModelChoiceField(queryset=Building.objects.all(), required=False, label="Loja")
+    building = forms.ModelChoiceField(queryset=Building.objects.all(), required=False, label="Depósito")
+
+class UploadExcelForm(forms.Form):
+    file = forms.FileField(label='Arquivo Excel', widget=forms.FileInput(attrs={'class': 'form-control'}))
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        file = cleaned_data.get('file')
+        if file:
+            if not file.name.endswith('.xlsx'):
+                raise forms.ValidationError('O arquivo deve ser um arquivo Excel (.xlsx)')
+        return cleaned_data

@@ -75,7 +75,6 @@
           Tem certeza de que deseja limpar a área de trabalho?
           <br>
             <div class="form-group">
-                <label for="employee" class="form-label">Responsável:</label>
                 <form id="clean" method="post" action="">
                     {% csrf_token %}
                     <input type="hidden" name="clean" value="True">
@@ -98,20 +97,30 @@
         <form method="post" class="row g-3">
             {% csrf_token %}
             <div class="form-group">
-                <label for="location">Área de transferência:</label>
+                <label for="location">Tipo de Depósito:</label>
                 <select name="location" id="location" class="form-select">
                     <option value="None" selected>---------</option>
-                    {% for transfer_area in transfer_areas %}
-                    <option value="{{ transfer_area.id }}">{{ transfer_area }}</option>
+                    {% for storage_type in storage_types %}
+                    <option value="{{ storage_type.id }}">{{ storage_type }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group" style="display: none;" id="buildingGroup">
-                <label for="building">Loja:</label>
+                <label for="building">Depósito:</label>
                 <select name="building" id="building" class="form-select">
                     <option value="" selected>---------</option>
                     {% for building in buildings %}
                     <option value="{{ building.id }}">{{ building }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group" style="display: none;" id="hallGroup">
+                <label for="hall">Corredor:</label>
+                <select name="hall" id="hall" class="form-select">
+                    <option value="" selected>---------</option>
+                    {% for hall in halls %}
+                    <option value="{{ hall.id }}">{{ hall }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -121,15 +130,6 @@
                     <option value="" selected>---------</option>
                     {% for room in rooms %}
                     <option value="{{ room.id }}">{{ room }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group" style="display: none;" id="hallGroup">
-                <label for="hall">Corredor:</label>
-                <select name="hall" id="hall" class="form-select">
-                    <option value="" selected>---------</option>
-                    {% for hall in halls %}
-                    <option value="{{ hall.id }}">{{ hall }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -281,135 +281,201 @@
 
 <script>
     $(document).ready(function() {
-function updateFields() {
-    var locationSelected = $('#location option:selected').text().trim();
-    var buildingSelected = $('#building').val();
-    var roomSelected = $('#room').val();
-    var hallSelected = $('#hall').val();
-    var shelfSelected = $('#shelf').val();
+    
+    function updateFields() {
+        var locationSelectedText = $('#location option:selected').text().trim();
 
-    if (locationSelected === "Loja") {
-        $('#buildingGroup').show();
-    } else {
-        $('#buildingGroup').hide();
-        $('#roomGroup').hide();
-        $('#hallGroup').hide();
-        $('#shelfGroup').hide();
-    }
-
-    if (buildingSelected) {
-        $('#roomGroup').show();
-        updateRooms(buildingSelected, roomSelected);
-    } else {
-        $('#roomGroup').hide();
-    }
-
-    if (roomSelected) {
-        $('#hallGroup').show();
-        updateHalls(roomSelected, hallSelected);
-    } else {
-        $('#hallGroup').hide();
-    }
-
-    if (hallSelected) {
-        $('#shelfGroup').show();
-        updateShelves(hallSelected, shelfSelected);
-    } else {
-        $('#shelfGroup').hide();
-    }
-}
-
-function updateRooms(buildingId, selectedRoom) {
-    if (!buildingId) {
-        return;
-    }
-
-    $.ajax({
-        url: '/get-rooms/',
-        data: {
-            'building_id': buildingId
-        },
-        success: function(data) {
-            $('#room').empty();
-            $('#room').append($('<option>').text('---------').attr('value', ''));
-            $.each(data, function(index, value) {
-                var option = $('<option>').text(value.name).attr('value', value.id);
-                if (value.id == selectedRoom) {
-                    option.attr('selected', 'selected');
-                }
-                $('#room').append(option);
-            });
+        if (locationSelectedText === "Depósito") {
+            $('#buildingGroup').show();
+        } else {
+            $('#buildingGroup').hide();
+            $('#hallGroup').hide();
+            $('#roomGroup').hide();
+            $('#shelfGroup').hide();
+            return; // Early return if location is not "Depósito"
         }
-    });
-}
 
-function updateHalls(roomId, selectedHall) {
-    if (!roomId) {
-        return;
+        var buildingSelected = $('#building').val();
+        if (buildingSelected) {
+            getBuildingProperties(buildingSelected).then(function(properties) {
+                var hallSelected = $('#hall').val();
+                var roomSelected = $('#room').val();
+                var shelfSelected = $('#shelf').val();
+
+                if (properties.has_hall) {
+                    $('#hallGroup').show();
+                    updateHalls(buildingSelected, hallSelected).then(function() {
+                        if (properties.has_room) {
+                            $('#roomGroup').show();
+                            if (hallSelected) {
+                                updateRoomsByHall(hallSelected, roomSelected).then(function() {
+                                    if (properties.has_shelf) {
+                                        $('#shelfGroup').show();
+                                        updateShelvesByRoom(roomSelected, shelfSelected);
+                                    } else {
+                                        $('#shelfGroup').hide();
+                                    }
+                                });
+                            } else {
+                                updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
+                                    if (properties.has_shelf) {
+                                        $('#shelfGroup').show();
+                                        updateShelvesByBuilding(buildingSelected, shelfSelected);
+                                    } else {
+                                        $('#shelfGroup').hide();
+                                    }
+                                });
+                            }
+                        } else {
+                            $('#roomGroup').hide();
+                            $('#shelfGroup').hide();
+                        }
+                    });
+                } else {
+                    $('#hallGroup').hide();
+                    if (properties.has_room) {
+                        $('#roomGroup').show();
+                        updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
+                            if (properties.has_shelf) {
+                                $('#shelfGroup').show();
+                                updateShelvesByBuilding(buildingSelected, shelfSelected);
+                            } else {
+                                $('#shelfGroup').hide();
+                            }
+                        });
+                    } else {
+                        $('#roomGroup').hide();
+                        $('#shelfGroup').hide();
+                    }
+                }
+            });
+        } else {
+            $('#hallGroup').hide();
+            $('#roomGroup').hide();
+            $('#shelfGroup').hide();
+        }
     }
 
-    $.ajax({
-        url: '/get-halls/',
-        data: {
-            'room_id': roomId
-        },
-        success: function(data) {
-            $('#hall').empty();
-            $('#hall').append($('<option>').text('---------').attr('value', ''));
-            $.each(data, function(index, value) {
-                var option = $('<option>').text(value.name).attr('value', value.id);
-                if (value.id == selectedHall) {
-                    option.attr('selected', 'selected');
-                }
-                $('#hall').append(option);
-            });
-        }
-    });
-}
-
-function updateShelves(hallId, selectedShelf) {
-    if (!hallId) {
-        return;
+    function getBuildingProperties(buildingId) {
+   
+        return $.ajax({
+            url: '/get-building-properties/',
+            data: { 'building_id': buildingId }
+        });
     }
 
-    $.ajax({
-        url: '/get-shelves/',
-        data: {
-            'hall_id': hallId
-        },
-        success: function(data) {
-            $('#shelf').empty();
-            $('#shelf').append($('<option>').text('---------').attr('value', ''));
-            $.each(data, function(index, value) {
-                var option = $('<option>').text(value.name).attr('value', value.id);
-                if (value.id == selectedShelf) {
-                    option.attr('selected', 'selected');
-                }
-                $('#shelf').append(option);
-            });
-        }
+    function updateHalls(buildingId, selectedHall) {
+     
+        return $.ajax({
+            url: '/get-halls/',
+            data: { 'building_id': buildingId },
+            success: function(data) {
+                $('#hall').empty();
+                $('#hall').append($('<option>').text('---------').attr('value', ''));
+                $.each(data, function(index, value) {
+                    var option = $('<option>').text(value.name).attr('value', value.id);
+                    if (value.id == selectedHall) {
+                        option.attr('selected', 'selected');
+                    }
+                    $('#hall').append(option);
+                });
+            }
+        });
+    }
+
+    function updateRoomsByBuilding(buildingId, selectedRoom) {
+        return $.ajax({
+            url: '/get-rooms/',
+            data: { 'building_id': buildingId },
+            success: function(data) {
+                $('#room').empty();
+                $('#room').append($('<option>').text('---------').attr('value', ''));
+                $.each(data, function(index, value) {
+                    var option = $('<option>').text(value.name).attr('value', value.id);
+                    if (value.id == selectedRoom) {
+                        option.attr('selected', 'selected');
+                    }
+                    $('#room').append(option);
+                });
+            }
+        });
+    }
+
+    function updateRoomsByHall(hallId, selectedRoom) {
+        return $.ajax({
+            url: '/get-rooms/',
+            data: { 'hall_id': hallId },
+            success: function(data) {
+                $('#room').empty();
+                $('#room').append($('<option>').text('---------').attr('value', ''));
+                $.each(data, function(index, value) {
+                    var option = $('<option>').text(value.name).attr('value', value.id);
+                    if (value.id == selectedRoom) {
+                        option.attr('selected', 'selected');
+                    }
+                    $('#room').append(option);
+                });
+            }
+        });
+    }
+
+    function updateShelvesByBuilding(buildingId, selectedShelf) {
+        return $.ajax({
+            url: '/get-shelves/',
+            data: { 'building_id': buildingId },
+            success: function(data) {
+                $('#shelf').empty();
+                $('#shelf').append($('<option>').text('---------').attr('value', ''));
+                $.each(data, function(index, value) {
+                    var option = $('<option>').text(value.name).attr('value', value.id);
+                    if (value.id == selectedShelf) {
+                        option.attr('selected', 'selected');
+                    }
+                    $('#shelf').append(option);
+                });
+            }
+        });
+    }
+
+    function updateShelvesByRoom(roomId, selectedShelf) {
+        return $.ajax({
+            url: '/get-shelves/',
+            data: { 'room_id': roomId },
+            success: function(data) {
+                $('#shelf').empty();
+                $('#shelf').append($('<option>').text('---------').attr('value', ''));
+                $.each(data, function(index, value) {
+                    var option = $('<option>').text(value.name).attr('value', value.id);
+                    if (value.id == selectedShelf) {
+                        option.attr('selected', 'selected');
+                    }
+                    $('#shelf').append(option);
+                });
+            }
+        });
+    }
+
+    $('#location').change(function() {
+        updateFields();
     });
-}
 
-$('#location').change(function() {
+    $('#building').change(function() {
+        updateFields();
+    });
+
+    $('#hall').change(function() {
+        updateFields();
+    });
+
+    $('#room').change(function() {
+        updateFields();
+    });
+
     updateFields();
-});
-
-$('#building').change(function() {
-    updateFields();
-});
-
-$('#room').change(function() {
-    updateFields();
-});
-
-$('#hall').change(function() {
-    updateFields();
-});
-
-updateFields();  // Para a inicialização no carregamento da página
 });
 </script>
+
+
 
 <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>

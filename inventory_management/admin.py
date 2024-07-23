@@ -43,7 +43,7 @@ def download_qr_codes(modeladmin, request, queryset):
     return redirect(url)
     
 
-download_qr_codes.short_description = "Baixar QR Codes"
+download_qr_codes.short_description = "Gerar QR Codes"
 
 
 def write_off_products(modeladmin, request, queryset):
@@ -67,16 +67,16 @@ class ClothConsumptionInline(admin.TabularInline):
 
 class StockTransferInline(admin.TabularInline):
     model = StockTransfer
-    readonly_fields = ('origin_transfer_area','origin_shelf','destination_transfer_area', 'destination_shelf', 'transfer_date', 'observations')
+    readonly_fields = ('origin_storage_type','origin_shelf','destination_storage_type', 'destination_shelf', 'transfer_date', 'observations')
     extra = 0
 
     
 @admin.register(ProductUnit)
 class ProductUnitAdmin(admin.ModelAdmin):
-    list_display = ('product', 'location','shelf_or_none','weight_length_with_measure', 'write_off' ,'qr_code_generated','purchase_date', "created_by", "created_at", "updated_by", "updated_at")
-    search_fields = ('product__name', 'location__name', 'id')
-    list_filter = ('product' ,'purchase_date', 'location', 'write_off')
-    fields = ['product', 'location', 'building', 'room', 'hall', 'shelf', 'purchase_date', 'quantity', 'weight_length', 'incoming',]
+    list_display = ('product', 'code' ,'location','shelf_or_none','weight_length_with_measure', 'write_off' , 'was_written_off' ,'qr_code_generated','purchase_date', "created_by", "created_at", "updated_by", "updated_at")
+    search_fields = ('product__name', 'location__name', 'id', 'code')
+    list_filter = ('product' ,'purchase_date', 'location', 'write_off', 'was_written_off' ,'qr_code_generated')
+    fields = ['product', 'location', 'building', 'hall', 'room', 'shelf', 'quantity', 'weight_length', 'incoming',]
     actions = [download_qr_codes, write_off_products, write_on_products]
     inlines = [ClothConsumptionInline, StockTransferInline]
 
@@ -86,11 +86,16 @@ class ProductUnitAdmin(admin.ModelAdmin):
             'admin/product_unit_admin.js',
         )
 
-    
     def get_fieldsets(self, request, obj=None):
         fieldsets = super().get_fieldsets(request, obj)
+        
         if obj:
-            fieldsets.append((None, {'fields': ('qr_code_image', 'write_off', 'qr_code_generated')}))
+            last_fieldset_index = len(fieldsets) - 1 
+            last_fieldset = list(fieldsets[last_fieldset_index])
+            updated_fields = list(last_fieldset[1]['fields']) + ['purchase_date', 'code', 'qr_code_image', 'write_off', 'qr_code_generated']
+            last_fieldset[1]['fields'] = updated_fields
+            fieldsets[last_fieldset_index] = tuple(last_fieldset)
+            
         return fieldsets
     
     def shelf_or_none(self, obj):
@@ -102,11 +107,11 @@ class ProductUnitAdmin(admin.ModelAdmin):
     def weight_length_with_measure(self, obj):
         product_measure = obj.product.get_measure_display()
         return f"{obj.weight_length} {product_measure}"
-    weight_length_with_measure.short_description = 'Tamanho / Peso'
+    weight_length_with_measure.short_description = 'Metro/Kg'
 
     def qr_code_image(self, obj):
         if obj:
-            absolute_url = f"http://localhost:8000{obj.get_absolute_url()}"
+            absolute_url = f"{obj.get_absolute_url()}"
             qr = qrcode.make(absolute_url)
             qr_io = BytesIO()
             qr.save(qr_io, format='PNG')
@@ -122,18 +127,16 @@ class ProductUnitAdmin(admin.ModelAdmin):
             form.base_fields['quantity'].widget = forms.HiddenInput()
             form.base_fields['weight_length'].disabled = True
             form.base_fields['incoming'].disabled = True
-        else:
-            pass
         return form
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "location":
-            kwargs["queryset"] = TransferAreas.objects.exclude(name = "Baixa")
+            kwargs["queryset"] = StorageType.objects.exclude(name = "Baixa")
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
-            return self.readonly_fields + ('product','location', 'qr_code_image', 'building', 'room', 'hall', 'shelf', 'purchase_date', 'write_off', 'qr_code_generated',)
+            return self.readonly_fields + ('product','location', 'purchase_date','code' ,'qr_code_image', 'building', 'room', 'hall', 'shelf', 'write_off', 'qr_code_generated',)
         return self.readonly_fields
 
     def get_urls(self):
@@ -179,25 +182,18 @@ class StockTransferAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'transfer_date', 'created_by', 'created_at', 'updated_by', 'updated_at')
     search_fields = ('product_unit__product__name', 'origin__name', 'destination__name')
     list_filter = ('transfer_date', 'origin_shelf', 'destination_shelf')
-    fields = ['product_unit', 'origin_transfer_area', 'origin_shelf', 'destination_transfer_area','destination_building', 'destination_room', 'destination_hall', 'destination_shelf', 'transfer_date', 'observations']
+    fields = ['product_unit', 'origin_storage_type','origin_building','origin_hall','origin_room', 'origin_shelf', 'destination_storage_type','destination_building', 'destination_hall', 'destination_room', 'destination_shelf', 'observations']
 
-    def get_form(self, request, obj=None, **kwargs):
-        form = super().get_form(request, obj, **kwargs)
-        if not obj:
-            form.base_fields['origin_transfer_area'].widget = forms.HiddenInput()
-            form.base_fields['origin_shelf'].widget = forms.HiddenInput()
-        else:
-            pass
-        return form
+    
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
-            return self.readonly_fields + ('product_unit', 'origin_transfer_area', 'origin_shelf','destination_transfer_area', 'destination_shelf', 'transfer_date')
+            return self.readonly_fields + ('product_unit', 'origin_storage_type', 'origin_shelf','destination_storage_type', 'destination_shelf', 'transfer_date')
         return self.readonly_fields
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "location":
-            kwargs["queryset"] = TransferAreas.objects.exclude(name = "Baixa")
+        if db_field.name == "destination_storage_type":
+            kwargs["queryset"] = StorageType.objects.exclude(name = "Baixa")
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
     
     class Media:
@@ -221,8 +217,10 @@ class WriteOffAdmin(admin.ModelAdmin):
         js = ('admin/admin_write_off.js',)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "transfer_area":
-            kwargs["queryset"] = TransferAreas.objects.filter(name = "Baixa")
+        if db_field.name == "storage_type":
+            kwargs["queryset"] = StorageType.objects.filter(name = "Baixa")
+        if db_field.name == "recomission_storage_type":
+            kwargs["queryset"] = StorageType.objects.exclude(name = "Baixa")
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def write_off_destination_or_none(self, obj):
@@ -247,23 +245,13 @@ class WriteOffAdmin(admin.ModelAdmin):
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
-class RoomInline(admin.StackedInline):
-    model = Room
-    
-    def get_extra(self, request, obj=None, **kwargs):
-        if obj:
-            return 0
-        return 1 
 
 @admin.register(Building)
 class BuildingAdmin(admin.ModelAdmin):
     list_display = ('name', 'cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state', 'created_by', 'created_at', 'updated_by', 'updated_at')
     search_fields = ('name', 'cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state')
     list_filter = ('street', 'neighborhood', 'city')
-    inlines = [
-        RoomInline,
-    ]
-    
+   
     class Media:
         js = ('admin/autocomplete_address.js',)
 
@@ -273,30 +261,21 @@ class BuildingAdmin(admin.ModelAdmin):
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
 
-@admin.register(Room)
-class RoomAdmin(admin.ModelAdmin):
-    
-    def change_view(self, request, object_id):
-        room = self.get_object(request, object_id)
-        building_id = room.building.id
-        building_change_url = reverse('admin:inventory_management_building_change', args=[building_id])
-        return HttpResponseRedirect(building_change_url)
-    
-    def has_view_permission(self, request):
-        return False
-    
-    def has_add_permission(self, request):
-        return False
-    
-    def has_change_permission(self, request):
-        return False
-
 @admin.register(Hall)
 class HallAdmin(admin.ModelAdmin):
     pass
 
+@admin.register(Rooms)
+class RoomsAdmin(admin.ModelAdmin):
+    class Media:
+        js = ('admin/building_models.js',)
+    pass
+
+
 @admin.register(Shelf)
 class ShelfAdmin(admin.ModelAdmin):
+    class Media:
+        js = ('admin/building_models.js',)
     pass
 
 @admin.register(Color)
@@ -320,8 +299,8 @@ class WriteOffDestinationsAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-@admin.register(TransferAreas)
-class TransferAreasAdmin(admin.ModelAdmin):
+@admin.register(StorageType)
+class StorageTypeAdmin(admin.ModelAdmin):
     list_display = ('name', 'created_by', 'created_at', 'updated_by', 'updated_at')
     search_fields = ('name',)
     list_filter = ('created_at', 'updated_at')

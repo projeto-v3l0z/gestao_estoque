@@ -8,12 +8,12 @@
             <h1 class="mb-4">{{ object.product }}</h1>
             <p class="mb-4">
                 <i class="bi bi-geo-alt-fill"></i>
-                {%if object.write_off%} <strong>Última Localização:</strong> {% else %} <strong>Localização Atual:</strong>{%endif%} {{ object.location }} {% if object.shelf %} - {{ object.shelf }} {% endif %}
+                {%if object.write_off%} <strong>Última Localização:</strong> {% else %} <strong>Localização Atual:</strong>{%endif%} {{ object.location }} {% if object.shelf %} - {{ object.shelf }} {% elif object.room %} - {{object.room }} {% elif object.hall %} - {{object.hall }} {% elif object.building %} - {{object.building }} {% endif %}
             </p>
         </div>
-    {% if object.stocktransfer_set.all or write_offs %}
+    {% if object.stocktransfer_set.all %}
         <div class="col-12">
-            <h2 class="mb-3">Movimentações</h2>
+            <h2 class="mb-2">Movimentações</h2>
             <table class="table table-striped">`
                 <thead>
                     <tr>
@@ -28,20 +28,56 @@
                     {% for transfer in object.stocktransfer_set.all %}
                     <tr>
                         <td>{{ transfer.transfer_date }}</td>
-                        <td>{{ transfer.origin_transfer_area }} {% if transfer.origin_shelf%} - {{transfer.origin_shelf }} {% endif %}</td>
-                        <td>{{ transfer.destination_transfer_area }} {% if transfer.destination_shelf%} - {{transfer.destination_shelf }} {% endif %}</td>
+                        <td>
+                                {{ transfer.origin_storage_type }}
+                                {% if transfer.origin_shelf %}
+                                    - {{ transfer.origin_shelf }}
+                                {% elif transfer.origin_room %}
+                                    - {{ transfer.origin_room }}
+                                {% elif transfer.origin_building %}
+                                    - {{ transfer.origin_building }}
+                                {% endif %}
+                        </td>
+                        <td>
+                                {{ transfer.destination_storage_type }}
+                                {% if transfer.destination_shelf %}
+                                    - {{ transfer.destination_shelf }}
+                                {% elif transfer.destination_room %}
+                                    - {{ transfer.destination_room }}
+                                {% elif transfer.destination_building %}
+                                    - {{ transfer.destination_building }}
+                                {% endif %}
+                        </td>
                         <td>{{ transfer.observations }}</td>
                         <td> {{ transfer.created_by }} </td>
                     </tr>
                     {% endfor %}
+                    
+                </tbody>
+            </table>
+            {% endif %}
+            {% if write_offs %}
+            <h2 class="mb-2 mt-4">Baixas</h2>
+            <table class="table table-striped">`
+                <thead>
+                    <tr>
+                        <th scope="col">Data</th>
+                        <th scope="col">Origem</th>
+                        <th scope="col">Destino</th>
+                        <th scope="col">Observações</th>
+                        <th scope="col">Responsável</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
                     {% for write_off in write_offs %}
                     <tr>
                         <td>{{ write_off.write_off_date }}</td>
                         <td>{{ write_off.origin }}</td>
-                        {% if write_off.transfer_area %}
-                            <td>{{ write_off.transfer_area}}</td>
+                        {% if write_off.storage_type %}
+                            <td>{{ write_off.storage_type}}</td>
                         {% else %}
-                            <td>{{ write_off.recomission_transfer_area}} {% if write_off.recomission_shelf %} {{ write_off.recomission_shelf }} {% endif %} </td>
+                            <td>{{ write_off.recomission_storage_type}} {% if write_off.recomission_shelf %} {{ write_off.recomission_shelf }} {% elif write_off.recomission_room %} {{write_off.recomission_room}} {% elif write_off.recomission_hall %} {{write_off.recomission_hall}} {% elif write_off.recomission_building %} {{write_off.recomission_building}} {% endif %} </td>
                         {% endif %}
                         <td>{{ write_off.observations }}</td>
                         {% if write_off.created_by %}
@@ -53,9 +89,9 @@
                     {% endfor %}
                 </tbody>
             </table>
+            {% endif %}
         </div>
     </div>
-    {% endif %}
 
     {% if consumptions %}
 
@@ -114,29 +150,20 @@
             <span class="text-danger remainder-error"></span>
         </div>
         <div class="form-group">
-            <label for="location">Área de transferência:</label>
+            <label for="location">Tipo de Depósito:</label>
             <select name="location" id="location" class="form-select">
                 <option value="" selected>---------</option>
-                {% for transfer_area in transfer_areas %}
-                <option value="{{ transfer_area.id }}">{{ transfer_area }}</option>
+                {% for storage_type in storage_types %}
+                <option value="{{ storage_type.id }}">{{ storage_type }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="form-group" style="display: none;" id="buildingGroup">
-            <label for="building">Loja:</label>
+            <label for="building">Depósito:</label>
             <select name="building" id="building" class="form-select">
                 <option value="" selected>---------</option>
                 {% for building in buildings %}
                 <option value="{{ building.id }}">{{ building }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group" style="display: none;" id="roomGroup">
-            <label for="room">Sala:</label>
-            <select name="room" id="room" class="form-select">
-                <option value="" selected>---------</option>
-                {% for room in rooms %}
-                <option value="{{ room.id }}">{{ room }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -146,6 +173,15 @@
                 <option value="" selected>---------</option>
                 {% for hall in halls %}
                 <option value="{{ hall.id }}">{{ hall }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="display: none;" id="roomGroup">
+            <label for="room">Sala:</label>
+            <select name="room" id="room" class="form-select">
+                <option value="" selected>---------</option>
+                {% for room in rooms %}
+                <option value="{{ room.id }}">{{ room }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -161,8 +197,8 @@
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
             <button id="submit_btn" class="btn btn-success">Confirmar Retorno ao Estoque</button>
+        </form>
         </div>
-    </form>
             </div>
         </div>
         
@@ -225,29 +261,20 @@
                     {% csrf_token %}
                     <input type="hidden" name="transfer_stock" value="True">
                     <div class="form-group">
-                        <label for="location">Área de transferência:</label>
+                        <label for="location">Tipo de Depósito:</label>
                         <select name="location" id="location" class="form-select">
                             <option value="" selected>---------</option>
-                            {% for transfer_area in transfer_areas %}
-                            <option value="{{ transfer_area.id }}">{{ transfer_area }}</option>
+                            {% for storage_type in storage_types %}
+                            <option value="{{ storage_type.id }}">{{ storage_type }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="form-group" style="display: none;" id="buildingGroup">
-                        <label for="building">Loja:</label>
+                        <label for="building">Depósito:</label>
                         <select name="building" id="building" class="form-select">
                             <option value="" selected>---------</option>
                             {% for building in buildings %}
                             <option value="{{ building.id }}">{{ building }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group" style="display: none;" id="roomGroup">
-                        <label for="room">Sala:</label>
-                        <select name="room" id="room" class="form-select">
-                            <option value="" selected>---------</option>
-                            {% for room in rooms %}
-                            <option value="{{ room.id }}">{{ room }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -257,6 +284,15 @@
                             <option value="" selected>---------</option>
                             {% for hall in halls %}
                             <option value="{{ hall.id }}">{{ hall }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group" style="display: none;" id="roomGroup">
+                        <label for="room">Sala:</label>
+                        <select name="room" id="room" class="form-select">
+                            <option value="" selected>---------</option>
+                            {% for room in rooms %}
+                            <option value="{{ room.id }}">{{ room }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -274,10 +310,12 @@
                         <textarea name="observations" id="observations" class="form-control"></textarea>
                     </div>
                     <div class="col-12 text-center">
-                        <button type="submit" class="btn btn-primary" {% if not shelves %}disabled{% endif %}><i class="bi bi-arrow-right"></i> Transferir</button>
+                        <button type="submit" class="btn btn-primary" {% if not shelves %}disabled{% endif %}>
+                            <i class="bi bi-arrow-right"></i> Transferir
+                        </button>
                     </div>
                 </form>
-            </div>            
+            </div>      
         </div> 
     {% endif %}
 </div>
@@ -302,10 +340,10 @@
                 </div>
                 <div class="col-md-12">
                     <h2>Rendimento:</h2>
-                    <p>{{ object.imcoming }}</p>
+                    <p>{{ object.incoming }}</p>
                 </div>
                 <div class="col-md-12">
-                    <h3>Unidade de medida: {{ object.product.measure }}</h3>
+                    <h3>Unidade de medida: {{ object.product.get_measure }}</h3>
                 </div>
                 <div class="col-md-12 mt-2">
                     <h2>Preço</h2>
@@ -370,138 +408,199 @@
 
 
 <script>
-        $(document).ready(function() {
-    function updateFields() {
-        var locationSelected = $('#location option:selected').text().trim();
-        var buildingSelected = $('#building').val();
-        var roomSelected = $('#room').val();
-        var hallSelected = $('#hall').val();
-        var shelfSelected = $('#shelf').val();
-
-        if (locationSelected === "Loja") {
-            $('#buildingGroup').show();
-        } else {
-            $('#buildingGroup').hide();
-            $('#roomGroup').hide();
-            $('#hallGroup').hide();
-            $('#shelfGroup').hide();
-        }
-
-        if (buildingSelected) {
-            $('#roomGroup').show();
-            updateRooms(buildingSelected, roomSelected);
-        } else {
-            $('#roomGroup').hide();
-            $('#hallGroup').hide();
-            $('#shelfGroup').hide();
-        }
-
-        if (roomSelected) {
-            $('#hallGroup').show();
-            updateHalls(roomSelected, hallSelected);
-        } else {
-            $('#hallGroup').hide();
-            $('#shelfGroup').hide();
-        }
-
-        if (hallSelected) {
-            $('#shelfGroup').show();
-            updateShelves(hallSelected, shelfSelected);
-        } else {
-            $('#shelfGroup').hide();
-        }
-    }
-
-    function updateRooms(buildingId, selectedRoom) {
-        if (!buildingId) {
-            return;
-        }
-
-        $.ajax({
-            url: '/get-rooms/',
-            data: {
-                'building_id': buildingId
-            },
-            success: function(data) {
-                $('#room').empty();
-                $('#room').append($('<option>').text('---------').attr('value', ''));
-                $.each(data, function(index, value) {
-                    var option = $('<option>').text(value.name).attr('value', value.id);
-                    if (value.id == selectedRoom) {
-                        option.attr('selected', 'selected');
-                    }
-                    $('#room').append(option);
-                });
+    $(document).ready(function() {
+    
+        function updateFields() {
+            var locationSelectedText = $('#location option:selected').text().trim();
+    
+            if (locationSelectedText === "Depósito") {
+                $('#buildingGroup').show();
+            } else {
+                $('#buildingGroup').hide();
+                $('#hallGroup').hide();
+                $('#roomGroup').hide();
+                $('#shelfGroup').hide();
+                return; // Early return if location is not "Depósito"
             }
-        });
-    }
-
-    function updateHalls(roomId, selectedHall) {
-        if (!roomId) {
-            return;
-        }
-
-        $.ajax({
-            url: '/get-halls/',
-            data: {
-                'room_id': roomId
-            },
-            success: function(data) {
-                $('#hall').empty();
-                $('#hall').append($('<option>').text('---------').attr('value', ''));
-                $.each(data, function(index, value) {
-                    var option = $('<option>').text(value.name).attr('value', value.id);
-                    if (value.id == selectedHall) {
-                        option.attr('selected', 'selected');
+    
+            var buildingSelected = $('#building').val();
+            if (buildingSelected) {
+                getBuildingProperties(buildingSelected).then(function(properties) {
+                    var hallSelected = $('#hall').val();
+                    var roomSelected = $('#room').val();
+                    var shelfSelected = $('#shelf').val();
+    
+                    if (properties.has_hall) {
+                        $('#hallGroup').show();
+                        updateHalls(buildingSelected, hallSelected).then(function() {
+                            if (properties.has_room) {
+                                $('#roomGroup').show();
+                                if (hallSelected) {
+                                    updateRoomsByHall(hallSelected, roomSelected).then(function() {
+                                        if (properties.has_shelf) {
+                                            $('#shelfGroup').show();
+                                            updateShelvesByRoom(roomSelected, shelfSelected);
+                                        } else {
+                                            $('#shelfGroup').hide();
+                                        }
+                                    });
+                                } else {
+                                    updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
+                                        if (properties.has_shelf) {
+                                            $('#shelfGroup').show();
+                                            updateShelvesByBuilding(buildingSelected, shelfSelected);
+                                        } else {
+                                            $('#shelfGroup').hide();
+                                        }
+                                    });
+                                }
+                            } else {
+                                $('#roomGroup').hide();
+                                $('#shelfGroup').hide();
+                            }
+                        });
+                    } else {
+                        $('#hallGroup').hide();
+                        if (properties.has_room) {
+                            $('#roomGroup').show();
+                            updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
+                                if (properties.has_shelf) {
+                                    $('#shelfGroup').show();
+                                    updateShelvesByBuilding(buildingSelected, shelfSelected);
+                                } else {
+                                    $('#shelfGroup').hide();
+                                }
+                            });
+                        } else {
+                            $('#roomGroup').hide();
+                            $('#shelfGroup').hide();
+                        }
                     }
-                    $('#hall').append(option);
                 });
+            } else {
+                $('#hallGroup').hide();
+                $('#roomGroup').hide();
+                $('#shelfGroup').hide();
             }
-        });
-    }
-
-    function updateShelves(hallId, selectedShelf) {
-        if (!hallId) {
-            return;
         }
-
-        $.ajax({
-            url: '/get-shelves/',
-            data: {
-                'hall_id': hallId
-            },
-            success: function(data) {
-                $('#shelf').empty();
-                $('#shelf').append($('<option>').text('---------').attr('value', ''));
-                $.each(data, function(index, value) {
-                    var option = $('<option>').text(value.name).attr('value', value.id);
-                    if (value.id == selectedShelf) {
-                        option.attr('selected', 'selected');
-                    }
-                    $('#shelf').append(option);
-                });
-            }
+    
+        function getBuildingProperties(buildingId) {
+       
+            return $.ajax({
+                url: '/get-building-properties/',
+                data: { 'building_id': buildingId }
+            });
+        }
+    
+        function updateHalls(buildingId, selectedHall) {
+         
+            return $.ajax({
+                url: '/get-halls/',
+                data: { 'building_id': buildingId },
+                success: function(data) {
+                    $('#hall').empty();
+                    $('#hall').append($('<option>').text('---------').attr('value', ''));
+                    $.each(data, function(index, value) {
+                        var option = $('<option>').text(value.name).attr('value', value.id);
+                        if (value.id == selectedHall) {
+                            option.attr('selected', 'selected');
+                        }
+                        $('#hall').append(option);
+                    });
+                }
+            });
+        }
+    
+        function updateRoomsByBuilding(buildingId, selectedRoom) {
+            return $.ajax({
+                url: '/get-rooms/',
+                data: { 'building_id': buildingId },
+                success: function(data) {
+                    $('#room').empty();
+                    $('#room').append($('<option>').text('---------').attr('value', ''));
+                    $.each(data, function(index, value) {
+                        var option = $('<option>').text(value.name).attr('value', value.id);
+                        if (value.id == selectedRoom) {
+                            option.attr('selected', 'selected');
+                        }
+                        $('#room').append(option);
+                    });
+                }
+            });
+        }
+    
+        function updateRoomsByHall(hallId, selectedRoom) {
+            return $.ajax({
+                url: '/get-rooms/',
+                data: { 'hall_id': hallId },
+                success: function(data) {
+                    $('#room').empty();
+                    $('#room').append($('<option>').text('---------').attr('value', ''));
+                    $.each(data, function(index, value) {
+                        var option = $('<option>').text(value.name).attr('value', value.id);
+                        if (value.id == selectedRoom) {
+                            option.attr('selected', 'selected');
+                        }
+                        $('#room').append(option);
+                    });
+                }
+            });
+        }
+    
+        function updateShelvesByBuilding(buildingId, selectedShelf) {
+            return $.ajax({
+                url: '/get-shelves/',
+                data: { 'building_id': buildingId },
+                success: function(data) {
+                    $('#shelf').empty();
+                    $('#shelf').append($('<option>').text('---------').attr('value', ''));
+                    $.each(data, function(index, value) {
+                        var option = $('<option>').text(value.name).attr('value', value.id);
+                        if (value.id == selectedShelf) {
+                            option.attr('selected', 'selected');
+                        }
+                        $('#shelf').append(option);
+                    });
+                }
+            });
+        }
+    
+        function updateShelvesByRoom(roomId, selectedShelf) {
+            return $.ajax({
+                url: '/get-shelves/',
+                data: { 'room_id': roomId },
+                success: function(data) {
+                    $('#shelf').empty();
+                    $('#shelf').append($('<option>').text('---------').attr('value', ''));
+                    $.each(data, function(index, value) {
+                        var option = $('<option>').text(value.name).attr('value', value.id);
+                        if (value.id == selectedShelf) {
+                            option.attr('selected', 'selected');
+                        }
+                        $('#shelf').append(option);
+                    });
+                }
+            });
+        }
+    
+        $('#location').change(function() {
+            updateFields();
         });
-    }
-
-    $('#location').change(function() {
+    
+        $('#building').change(function() {
+            updateFields();
+        });
+    
+        $('#hall').change(function() {
+            updateFields();
+        });
+    
+        $('#room').change(function() {
+            updateFields();
+        });
+    
         updateFields();
     });
-
-    $('#building').change(function() {
-        updateFields();
-    });
-
-    $('#room').change(function() {
-        updateFields();
-    });
-
-    $('#hall').change(function() {
-        updateFields();
-    });
-
-    updateFields();  // Para a inicialização no carregamento da página
-});
-</script>
-
+    </script>
+    
 {% endblock extra_scripts %}

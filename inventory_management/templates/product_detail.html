@@ -5,7 +5,7 @@
 <div class="row justify-content-center g-5 py-3">
     
     <div class="col-12 col-md-6">
-        <h1>{{ object.name }}</h1>
+        <h1>{{ object.name|title }}</h1>
         <p>{{ object.description|linebreaks }}</p>
         <h2>Preço</h2>
         <p class="h5">R$ {{ object.price }}</p>
@@ -51,7 +51,7 @@
                 <tr>
                     <td>
                         <a href="{% url 'inventory_management:product_unit_detail' item.product.slug item.slug %}">
-                            {{ item.product.name }} - {{ item.slug }}
+                            {{ item.product.name }} - {{ item.code }}
                         </a>
                     </td>
                     {% if item.write_off %}
@@ -85,7 +85,7 @@
             </nav>   
         </div> 
     </div>
-    <h4 class="d-flex justify-content-center"><strong>Total em metros: {{total_weight_length}}m</strong></h4>
+    <h4 class="d-flex justify-content-center"><strong>Total: {{total_weight_length}} {{object.get_measure|lower }}</strong></h4>
     {% endif %}
 </div>
 {% else %}
@@ -108,7 +108,7 @@
                     <p>{{ object.composition }}</p>
                 </div>
                 <div class="col-md-12">
-                    <h3>Unidade de medida: {{ object.measure }}</h3>
+                    <h3>Unidade de medida: {{object.get_measure }}</h3>
                 </div>
                 <div class="col-md-12 mt-2">
                     <h2>Preço</h2>
