@@ -183,11 +183,9 @@ class ProductUnitAdmin(admin.ModelAdmin):
 @admin.register(StockTransfer)
 class StockTransferAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'transfer_date', 'created_by', 'created_at', 'updated_by', 'updated_at')
-    search_fields = ('product_unit__product__name', 'origin__name', 'destination__name')
+    search_fields = ('product_unit__product__name', 'origin_building__name', 'origin_hall__name', 'origin_room__name', 'origin_shelf__name', 'destination_building__name', 'destination_hall__name', 'destination_room__name', 'destination_shelf__name', 'product_unit__product__code')
     list_filter = ('transfer_date', 'origin_shelf', 'destination_shelf')
     fields = ['product_unit', 'origin_storage_type','origin_building','origin_hall','origin_room', 'origin_shelf', 'destination_storage_type','destination_building', 'destination_hall', 'destination_room', 'destination_shelf', 'observations']
-
-    
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -207,6 +205,7 @@ class StockTransferAdmin(admin.ModelAdmin):
             obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
+
 
 
 @admin.register(Write_off)

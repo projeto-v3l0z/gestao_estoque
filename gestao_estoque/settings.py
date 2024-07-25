@@ -174,7 +174,7 @@ JAZZMIN_SETTINGS = {
         {"name": "Produtos", "url": "admin:inventory_management_product_changelist", "permissions": ["inventory_management.view_product"]},
         {"name": "Unidades de Produto", "url": "admin:inventory_management_productunit_changelist", "permissions": ["inventory_management.view_productunit"]},
         {"name": "Transferências", "url": "admin:inventory_management_stockTransfer_changelist", "permissions": ["inventory_management.view_stockTransfer"]},
-        {"name": "Carregar Dados", "url": "inventory_management:load_data"},
+        {"name": "Carregar Produtos", "url": "inventory_management:load_data"},
         {"name": "Voltar para o site", "url": "/"},
     ],
 

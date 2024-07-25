@@ -692,7 +692,7 @@ class UploadExcelView(View):
 
         messages.error(request, 'Ocorreu um erro no upload do arquivo. Verifique o formato e tente novamente.')
         return render(request, self.template_name, {'form': form})
-
+    
     def criar_produto_ou_atualizar(self, row):
         unidade_mapeada = self.MEASURE_MAPPING.get(row['unidade'].upper(), 'u')
         nome_lower = row['nome'].strip().lower()
@@ -702,6 +702,15 @@ class UploadExcelView(View):
                 'ncm': row['ncm'],
                 'price': row['preco'],
                 'measure': unidade_mapeada,
+                'updated_by': self.request.user,
+                'updated_at': timezone.now()
             }
         )
+        if created:
+            produto.created_by = self.request.user
+            produto.created_at = timezone.now()
+        else:
+            produto.updated_by = self.request.user
+            produto.updated_at = timezone.now()
+        produto.save()
         return created
