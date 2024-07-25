@@ -105,8 +105,11 @@ class ProductUnitAdmin(admin.ModelAdmin):
     shelf_or_none.short_description = 'Prateleira'
 
     def weight_length_with_measure(self, obj):
-        product_measure = obj.product.get_measure_display()
-        return f"{obj.weight_length} {product_measure}"
+        if obj.product.measure != 'u':
+            product_measure = obj.product.get_measure_display()
+            return f"{obj.weight_length} {product_measure}"
+        else:
+            return "Unitário"
     weight_length_with_measure.short_description = 'Metro/Kg'
 
     def qr_code_image(self, obj):

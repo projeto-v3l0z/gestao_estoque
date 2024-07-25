@@ -5,7 +5,7 @@
 <div class="container pt-5">
     <div class="row justify-content-center align-items-center">
         <div class="col-12">
-            <h1 class="mb-4">{{ object.product }}</h1>
+            <h1 class="mb-4">{{ object.product|title }}</h1>
             <p class="mb-4">
                 <i class="bi bi-geo-alt-fill"></i>
                 {%if object.write_off%} <strong>Última Localização:</strong> {% else %} <strong>Localização Atual:</strong>{%endif%} {{ object.location }} {% if object.shelf %} - {{ object.shelf }} {% elif object.room %} - {{object.room }} {% elif object.hall %} - {{object.hall }} {% elif object.building %} - {{object.building }} {% endif %}

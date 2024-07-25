@@ -32,7 +32,6 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.pdfmetrics import registerFontFamily
 from reportlab.pdfbase.ttfonts import TTFont
 from .forms import UploadExcelForm
-import openpyxl
 import pandas as pd
 
 

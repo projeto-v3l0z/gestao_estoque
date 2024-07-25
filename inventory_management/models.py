@@ -26,6 +26,7 @@ class Color(models.Model):
     class Meta:
         verbose_name_plural = "Cores"
         verbose_name = "Cor"
+        ordering = ['name']
         
 class Pattern(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -46,6 +47,7 @@ class Pattern(models.Model):
     class Meta:
         verbose_name_plural = "Estampas"
         verbose_name = "Estampa"
+        ordering = ['name']
 
 
 class Product(models.Model):
@@ -115,10 +117,10 @@ class ProductUnit(models.Model):
     building = models.ForeignKey('inventory_management.Building', on_delete=models.CASCADE, verbose_name="Depósito", blank=True, null=True)
     room = models.ForeignKey('inventory_management.Rooms', on_delete=models.CASCADE, verbose_name="Sala", blank=True, null=True)
     hall = models.ForeignKey('inventory_management.Hall', on_delete=models.CASCADE, verbose_name="Corredor", blank=True, null=True)
-    shelf = models.ForeignKey('inventory_management.Shelf', on_delete=models.CASCADE, verbose_name="Prateleira", blank=True, null=True)
+    shelf = models.ForeignKey('inventory_management.Shelf', on_delete=models.CASCADE, verbose_name="Gaveta", blank=True, null=True)
     purchase_date = models.DateField("Data de Entrada", auto_now_add=True)
     quantity = models.IntegerField("Quantidade", default=1)
-    weight_length = models.DecimalField("Metro/Kg", max_digits=10, decimal_places=2, null=False, blank=False)
+    weight_length = models.DecimalField("Metro/Kg", max_digits=10, decimal_places=2, null=True, blank=True)
     incoming = models.DecimalField("Rendimento", max_digits=10, decimal_places=2, null=True, blank=True)
     write_off = models.BooleanField("Está Baixado?", default=False)
     was_written_off = models.BooleanField("Foi baixado?", default=False)
@@ -145,6 +147,9 @@ class ProductUnit(models.Model):
             if not self.slug:
                 self.slug = slugify(f"{self.product.name}-{self.code}")
 
+            if self.product.measure == 'u':
+                self.weight_length = 1
+
             super(ProductUnit, self).save(*args, **kwargs)
 
             if not self.slug:
@@ -152,31 +157,35 @@ class ProductUnit(models.Model):
                 super(ProductUnit, self).save(update_fields=['slug'])
 
             if self.quantity > 1:
-                existing_units_count = ProductUnit.objects.filter(product=self.product, code__startswith='PRD-').count()
+                for i in range(1, self.quantity):
+                    new_unit = ProductUnit.objects.create(
+                        product=self.product,
+                        location=self.location,
+                        purchase_date=self.purchase_date,
+                        weight_length=self.weight_length,
+                        incoming=self.incoming,
+                        write_off=self.write_off,
+                        created_by=self.created_by,
+                        updated_by=self.updated_by,
+                        building=self.building,
+                        hall=self.hall,
+                        room=self.room,
+                        shelf=self.shelf,
+                        quantity=1
+                    )
+                    new_unit.generate_code()
+                    new_unit.slug = slugify(f"{self.product.name}-{new_unit.code}")
+                    new_unit.save()
 
-                if existing_units_count < self.quantity:
-                    for i in range(existing_units_count, self.quantity):
-                        new_unit = ProductUnit(
-                            product=self.product,
-                            location=self.location,
-                            purchase_date=self.purchase_date,
-                            weight_length=self.weight_length,
-                            incoming=self.incoming,
-                            write_off=self.write_off,
-                            created_by=self.created_by,
-                            updated_by=self.updated_by,
-                            shelf=self.shelf,
-                            quantity=1,
-                        )
-                        new_unit.generate_code()
-                        new_unit.slug = slugify(f"{self.product.name}-{new_unit.code}")
-                        new_unit.save()
-                
-                ProductUnit.objects.filter(id=self.id).update(quantity=1)
+            self.__class__.objects.filter(id=self.id).update(quantity=1)
 
     def clean(self):
         if self.quantity < 1:
             raise ValidationError("A quantidade deve ser maior que 0.")
+        if self.weight_length and self.weight_length < 0:
+            raise ValidationError("O peso/tamanho não pode ser negativo.")
+        if self.product.measure != 'u' and not self.weight_length:
+            raise ValidationError("O peso/tamanho é obrigatório.")
 
     def generate_code(self):
         last_unit = ProductUnit.objects.aggregate(Max('code'))
@@ -236,12 +245,12 @@ class StockTransfer(models.Model):
     origin_building = models.ForeignKey('inventory_management.Building', on_delete=models.CASCADE, related_name="stocktransfer_origin_building", verbose_name="Depósito de Origem", blank=True, null=True)
     origin_hall = models.ForeignKey('inventory_management.Hall', on_delete=models.CASCADE, related_name="stocktransfer_origin_hall", verbose_name="Corredor de Origem", blank=True, null=True)
     origin_room = models.ForeignKey('inventory_management.Rooms', on_delete=models.CASCADE, related_name="stocktransfer_origin_room", verbose_name="Sala de Origem", blank=True, null=True)
-    origin_shelf = models.ForeignKey('inventory_management.Shelf', on_delete=models.CASCADE, related_name="stocktransfer_origin_shelf", verbose_name="Prateleira de origem", blank=True, null=True)
+    origin_shelf = models.ForeignKey('inventory_management.Shelf', on_delete=models.CASCADE, related_name="stocktransfer_origin_shelf", verbose_name="Gaveta de origem", blank=True, null=True)
     destination_storage_type = models.ForeignKey('inventory_management.StorageType', on_delete=models.CASCADE, verbose_name="Tipo do Depósito de Destino")
     destination_building = models.ForeignKey('inventory_management.Building', on_delete=models.CASCADE, verbose_name="Depósito de Destino", blank=True, null=True)
     destination_room = models.ForeignKey('inventory_management.Rooms', on_delete=models.CASCADE, verbose_name="Sala de Destino", blank=True, null=True)
     destination_hall = models.ForeignKey('inventory_management.Hall', on_delete=models.CASCADE, verbose_name="Corredor de Destino", blank=True, null=True)
-    destination_shelf = models.ForeignKey('inventory_management.Shelf', on_delete=models.CASCADE, verbose_name="Prateleira de Destino", blank=True, null=True)
+    destination_shelf = models.ForeignKey('inventory_management.Shelf', on_delete=models.CASCADE, verbose_name="Gaveta de Destino", blank=True, null=True)
     transfer_date = models.DateTimeField("Data da Transferência", auto_now_add= True)
     observations = models.TextField("Observações", blank=True, null=True)
     created_by = models.ForeignKey('auth.User', verbose_name=_('Criado por'), on_delete=models.CASCADE, related_name='stock_created_by', null=True, editable=False)
@@ -302,7 +311,7 @@ class Write_off(models.Model):
     recomission_building = models.ForeignKey('inventory_management.Building',on_delete=models.CASCADE,verbose_name="Depósito de Recomissão", blank=True, null=True)
     recomission_hall = models.ForeignKey('inventory_management.Hall',on_delete=models.CASCADE,verbose_name="Corredor de Recomissão", blank=True, null=True)
     recomission_room = models.ForeignKey('inventory_management.Rooms',on_delete=models.CASCADE,verbose_name="Sala de Recomissão", blank=True, null=True)
-    recomission_shelf = models.ForeignKey('inventory_management.Shelf',on_delete=models.CASCADE,verbose_name="Prateleira da Recomissão", blank=True, null=True)
+    recomission_shelf = models.ForeignKey('inventory_management.Shelf',on_delete=models.CASCADE,verbose_name="Gaveta da Recomissão", blank=True, null=True)
     write_off_date = models.DateTimeField("Data de Baixa", auto_now_add=True)
     observations = models.TextField("Observações", blank=True, null=True)
     write_off_destination = models.ForeignKey('inventory_management.WriteOffDestinations', on_delete=models.CASCADE, verbose_name="Destinatário da Baixa", blank=True, null=True)
@@ -332,7 +341,7 @@ class Building(models.Model):
     cep = models.CharField("CEP", max_length=8)
     street = models.CharField("Rua", max_length=100)
     number = models.CharField("Número", max_length=10)
-    complement = models.CharField("Complemento", max_length=100)
+    complement = models.CharField("Complemento", max_length=100, blank=True, null=True)
     neighborhood = models.CharField("Bairro", max_length=100)
     city = models.CharField("Cidade", max_length=100)
     state = models.CharField("Estado (UF)", max_length=2)
@@ -424,10 +433,10 @@ class Rooms(models.Model):
         
 class Shelf (models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField("Nome da Prateleira", max_length=100)
+    name = models.CharField("Nome da Gaveta", max_length=100)
     building = models.ForeignKey('inventory_management.Building', on_delete=models.CASCADE, verbose_name="Depósito")
-    hall = models.ForeignKey('inventory_management.Hall', on_delete=models.CASCADE, verbose_name="Corredor")
-    room = models.ForeignKey('inventory_management.Rooms', on_delete=models.CASCADE, verbose_name="Sala")
+    hall = models.ForeignKey('inventory_management.Hall', on_delete=models.CASCADE, verbose_name="Corredor", blank=True, null=True)
+    room = models.ForeignKey('inventory_management.Rooms', on_delete=models.CASCADE, verbose_name="Sala", blank=True, null=True)
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
     created_by = models.ForeignKey('auth.User', verbose_name=_('Criado por'), on_delete=models.CASCADE, related_name='shelf_created_by', null=True, editable=False)
     created_at = models.DateTimeField(_('Criado em'), auto_now_add=True, null=True, editable=False)
@@ -436,7 +445,7 @@ class Shelf (models.Model):
 
     def clean(self):
         if self.building.has_shelf == False:
-            raise ValidationError("Esse prédio não possui prateleiras.")
+            raise ValidationError("Esse prédio não possui Gavetas.")
         if self.hall and self.building.has_hall == False:
             raise ValidationError("Esse prédio não possui corredores.")
         if self.room and self.building.has_room == False:
@@ -447,14 +456,14 @@ class Shelf (models.Model):
         super(Shelf, self).save(*args, **kwargs)
 
     def full_adress(self):
-        return f'{self.hall.room.building.address()} - Sala {self.hall.room.name} - Corredor {self.hall.name} - Prateleira {self.name}'
+        return f'{self.hall.room.building.address()} - Sala {self.hall.room.name} - Corredor {self.hall.name} - Gaveta {self.name}'
     
     def __str__(self):
-        return f' {self.hall} - Prateleira {self.name}'
+        return f' {self.hall} - Gaveta {self.name}'
 
     class Meta:
-        verbose_name_plural = "Prateleiras"
-        verbose_name = "Prateleira"
+        verbose_name_plural = "Gavetas"
+        verbose_name = "Gaveta"
         ordering = ['name']
 
 class ClothConsumption(models.Model):
