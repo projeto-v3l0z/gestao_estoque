@@ -19,6 +19,7 @@ urlpatterns = [
     path('get-halls/', views.get_halls, name='get_halls'),
     path('get-shelves/', views.get_shelves, name='get_shelves'),
     path('get-write-off-status/<uuid:product_unit_id>/', get_write_off_status, name='get_write_off_status'),
+    path('get-storage-type-is-store/', get_storage_type_is_store, name='get_storage_type_is_store'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('carregar-dados/', UploadExcelView.as_view(), name='load_data'),
 ]

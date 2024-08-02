@@ -6,11 +6,29 @@ $(document).ready(function() {
             return;
         }
         var locationSelected = $('#id_recomission_storage_type option:selected').text().trim();
+        var locationId = locationSelected.val();
 
-        if (locationSelected === "Depósito") {
-            $('.field-recomission_building').show();
-        } else {
-            $('.field-recomission_building').hide();
+        if (locationId) {
+            $.ajax({
+                url: '/get-storage-type-is-store/',
+                data: { 'id': locationId },
+                success: function(data) {
+                    var isStore = data.is_store;
+                    console.log('isStore', isStore);
+
+                    var buildingGroup = $('.field-building');
+                    if (isStore) {
+                        buildingGroup.show();
+                    } else {
+                        buildingGroup.hide();
+                    }
+                    
+                    // Adicione lógica adicional para os outros campos (hall, room, shelf) aqui
+                },
+                error: function() {
+                    console.error('Failed to fetch storage type data.');
+                }
+            });
         }
 
         var buildingSelected = $('#id_recomission_building').val();

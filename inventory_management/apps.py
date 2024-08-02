@@ -4,7 +4,8 @@ from django.db.models.signals import post_migrate
 def create_storage_type(sender, **kwargs):
     from .models import StorageType
     StorageType.objects.get_or_create(name='Depósito')
-    StorageType.objects.get_or_create(name='Hub')
+    StorageType.objects.get_or_create(name='Loja', is_store=True)
+    StorageType.objects.get_or_create(name='Conferência')
     StorageType.objects.get_or_create(name='Baixa')
 
 class InventoryManagementConfig(AppConfig):

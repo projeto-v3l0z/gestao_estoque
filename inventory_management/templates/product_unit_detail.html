@@ -409,75 +409,92 @@
 
 <script>
     $(document).ready(function() {
-    
         function updateFields() {
-            var locationSelectedText = $('#location option:selected').text().trim();
+            var locationSelected = $('#location').val();
     
-            if (locationSelectedText === "Depósito") {
-                $('#buildingGroup').show();
-            } else {
-                $('#buildingGroup').hide();
-                $('#hallGroup').hide();
-                $('#roomGroup').hide();
-                $('#shelfGroup').hide();
-                return; // Early return if location is not "Depósito"
-            }
+            if (locationSelected) {
+                $.ajax({
+                    url: '/get-storage-type-is-store/',
+                    data: { 'id': locationSelected },
+                    success: function(data) {
+                        var isStore = data.is_store;
     
-            var buildingSelected = $('#building').val();
-            if (buildingSelected) {
-                getBuildingProperties(buildingSelected).then(function(properties) {
-                    var hallSelected = $('#hall').val();
-                    var roomSelected = $('#room').val();
-                    var shelfSelected = $('#shelf').val();
+                        if (isStore) {
+                            $('#buildingGroup').show();
+                        } else {
+                            $('#buildingGroup').hide();
+                            $('#hallGroup').hide();
+                            $('#roomGroup').hide();
+                            $('#shelfGroup').hide();
+                            return; // Early return if is_store is false
+                        }
     
-                    if (properties.has_hall) {
-                        $('#hallGroup').show();
-                        updateHalls(buildingSelected, hallSelected).then(function() {
-                            if (properties.has_room) {
-                                $('#roomGroup').show();
-                                if (hallSelected) {
-                                    updateRoomsByHall(hallSelected, roomSelected).then(function() {
-                                        if (properties.has_shelf) {
-                                            $('#shelfGroup').show();
-                                            updateShelvesByRoom(roomSelected, shelfSelected);
+                        var buildingSelected = $('#building').val();
+                        if (buildingSelected) {
+                            getBuildingProperties(buildingSelected).then(function(properties) {
+                                var hallSelected = $('#hall').val();
+                                var roomSelected = $('#room').val();
+                                var shelfSelected = $('#shelf').val();
+    
+                                if (properties.has_hall) {
+                                    $('#hallGroup').show();
+                                    updateHalls(buildingSelected, hallSelected).then(function() {
+                                        if (properties.has_room) {
+                                            $('#roomGroup').show();
+                                            if (hallSelected) {
+                                                updateRoomsByHall(hallSelected, roomSelected).then(function() {
+                                                    if (properties.has_shelf) {
+                                                        $('#shelfGroup').show();
+                                                        updateShelvesByRoom(roomSelected, shelfSelected);
+                                                    } else {
+                                                        $('#shelfGroup').hide();
+                                                    }
+                                                });
+                                            } else {
+                                                updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
+                                                    if (properties.has_shelf) {
+                                                        $('#shelfGroup').show();
+                                                        updateShelvesByBuilding(buildingSelected, shelfSelected);
+                                                    } else {
+                                                        $('#shelfGroup').hide();
+                                                    }
+                                                });
+                                            }
                                         } else {
+                                            $('#roomGroup').hide();
                                             $('#shelfGroup').hide();
                                         }
                                     });
                                 } else {
-                                    updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
-                                        if (properties.has_shelf) {
-                                            $('#shelfGroup').show();
-                                            updateShelvesByBuilding(buildingSelected, shelfSelected);
-                                        } else {
-                                            $('#shelfGroup').hide();
-                                        }
-                                    });
-                                }
-                            } else {
-                                $('#roomGroup').hide();
-                                $('#shelfGroup').hide();
-                            }
-                        });
-                    } else {
-                        $('#hallGroup').hide();
-                        if (properties.has_room) {
-                            $('#roomGroup').show();
-                            updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
-                                if (properties.has_shelf) {
-                                    $('#shelfGroup').show();
-                                    updateShelvesByBuilding(buildingSelected, shelfSelected);
-                                } else {
-                                    $('#shelfGroup').hide();
+                                    $('#hallGroup').hide();
+                                    if (properties.has_room) {
+                                        $('#roomGroup').show();
+                                        updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
+                                            if (properties.has_shelf) {
+                                                $('#shelfGroup').show();
+                                                updateShelvesByBuilding(buildingSelected, shelfSelected);
+                                            } else {
+                                                $('#shelfGroup').hide();
+                                            }
+                                        });
+                                    } else {
+                                        $('#roomGroup').hide();
+                                        $('#shelfGroup').hide();
+                                    }
                                 }
                             });
                         } else {
+                            $('#hallGroup').hide();
                             $('#roomGroup').hide();
                             $('#shelfGroup').hide();
                         }
+                    },
+                    error: function() {
+                        console.error('Failed to fetch storage type data.');
                     }
                 });
             } else {
+                $('#buildingGroup').hide();
                 $('#hallGroup').hide();
                 $('#roomGroup').hide();
                 $('#shelfGroup').hide();
@@ -485,7 +502,6 @@
         }
     
         function getBuildingProperties(buildingId) {
-       
             return $.ajax({
                 url: '/get-building-properties/',
                 data: { 'building_id': buildingId }
@@ -493,7 +509,6 @@
         }
     
         function updateHalls(buildingId, selectedHall) {
-         
             return $.ajax({
                 url: '/get-halls/',
                 data: { 'building_id': buildingId },
@@ -602,5 +617,6 @@
         updateFields();
     });
     </script>
+    
     
 {% endblock extra_scripts %}

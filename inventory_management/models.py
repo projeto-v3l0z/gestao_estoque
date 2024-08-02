@@ -107,7 +107,7 @@ class Product(models.Model):
         return reverse('inventory_management:product_detail', kwargs={'slug': self.slug})
 
 def get_default_location():
-    return StorageType.objects.get_or_create(name="Hub")[0]
+    return StorageType.objects.get_or_create(name="Conferência")[0]
         
 class ProductUnit(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -526,6 +526,7 @@ class StorageType(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField("Nome do Local", max_length=100)
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
+    is_store = models.BooleanField("É Loja?", default=False)
     created_by = models.ForeignKey('auth.User', verbose_name=_('Criado por'), on_delete=models.CASCADE, related_name='destinations_created_by', null=True, editable=False)
     created_at = models.DateTimeField(_('Criado em'), auto_now_add=True, null=True, editable=False)
     updated_by = models.ForeignKey('auth.User', verbose_name=_('Atualizado por'), on_delete=models.CASCADE, related_name='destinations_updated_by', null=True, editable=False)

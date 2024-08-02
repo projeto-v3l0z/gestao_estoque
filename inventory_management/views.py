@@ -95,7 +95,7 @@ class ProductUnitDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['storage_types'] = StorageType.objects.exclude(name="Baixa")
+        context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
         context['halls'] = Hall.objects.all()
@@ -164,7 +164,7 @@ class ProductUnitDetailView(DetailView):
         shelf = Shelf.objects.get(pk=shelf_id) if shelf_id else None
 
 
-        if location.name == "Depósito":
+        if location.is_store == True:
             storage_type = StorageType.objects.get_or_create(name="Baixa")[0]
 
             Write_off.objects.create(
@@ -237,7 +237,7 @@ class ProductUnitDetailView(DetailView):
         origin = product_unit.location
         destination = StorageType.objects.get(pk=destination_id)
         
-        if destination.name == "Depósito":
+        if destination.is_store == True:
             if building_id:
                 building = Building.objects.get(pk=building_id)
             else:
@@ -279,7 +279,7 @@ class ProductUnitDetailView(DetailView):
         
         product_unit.location = destination
         
-        if destination.name == "Depósito":
+        if destination.is_store == True:
             product_unit.building_id = building_id
             if hall_id:
                 product_unit.hall_id = hall_id
@@ -393,34 +393,34 @@ def generate_qr_codes(request):
                     page_idx = idx // items_per_page 
 
                     if size_preset == 'pequeno':
-                        y_coordinate = page_height - 200 - (row % (items_per_page // columns)) * (qr_size + 20)
+                        y_coordinate = page_height - 200 - (row % (items_per_page // columns)) * (qr_size + 25)
                         x_coordinate = 27 + x_offset + col * (qr_size + 20)
                         text_x_coordinate = x_coordinate - 10
                         text_y_coordinate = y_coordinate + qr_size + 2 
                         text_x_coordinate2 = x_coordinate + 37.5
-                        text_y_coordinate2 = y_coordinate - qr_size + 100
-                        c.setFont("VeraBd", 6 )
+                        text_y_coordinate2 = y_coordinate - qr_size + 95
+                        c.setFont("VeraBd", 7 )
                     elif size_preset == 'medio':
-                        y_coordinate = page_height - 200 - (row % (items_per_page // columns)) * (qr_size + 20)
+                        y_coordinate = page_height - 200 - (row % (items_per_page // columns)) * (qr_size + 25)
                         x_coordinate = 13 + x_offset + col * (qr_size + 20)
                         text_x_coordinate = x_coordinate
                         text_y_coordinate = y_coordinate + qr_size + 2
                         text_x_coordinate2 = x_coordinate + 58.5
-                        text_y_coordinate2 = y_coordinate - qr_size + 155  
+                        text_y_coordinate2 = y_coordinate - qr_size + 150  
                         c.setFont("VeraBd", 8.5 )
                     elif size_preset == 'grande':
-                        y_coordinate = page_height - 250 - (row % (items_per_page // columns)) * (qr_size + 20)
+                        y_coordinate = page_height - 250 - (row % (items_per_page // columns)) * (qr_size + 25)
                         x_coordinate = 50 + x_offset + col * (qr_size + 20)
                         text_x_coordinate = x_coordinate - 5
                         text_y_coordinate = y_coordinate + qr_size + 2
                         text_x_coordinate2 = x_coordinate + 79.5
-                        text_y_coordinate2 = y_coordinate - qr_size + 210
+                        text_y_coordinate2 = y_coordinate - qr_size + 200
                         c.setFont("VeraBd", 11 )  
 
                     if idx > 0 and idx % items_per_page == 0:
                         c.showPage()
 
-                    c.drawString(text_x_coordinate, text_y_coordinate, item.product.name)    
+                    c.drawString(text_x_coordinate, text_y_coordinate, item.product.name.upper())    
                     c.drawInlineImage(qr, x_coordinate, y_coordinate, width=qr_size, height=qr_size)
                     c.drawString(text_x_coordinate2, text_y_coordinate2, item.code)
 
@@ -535,7 +535,7 @@ class WorkSpaceView(ListView):
 
             destination = StorageType.objects.get(pk=location_id)
 
-            if destination.name == "Depósito":
+            if destination.is_store == True:
                 if building_id:
                     building = Building.objects.get(pk=building_id)
                 else:
@@ -581,7 +581,7 @@ class WorkSpaceView(ListView):
 
                 product_unit.location = destination
 
-                if destination.name == "Depósito":
+                if destination.is_store == True:
                     product_unit.building_id = building_id
                     product_unit.room_id = room_id
                     product_unit.hall_id = hall_id
@@ -640,6 +640,16 @@ def get_shelves(request):
 def get_write_off_status(request, product_unit_id):
     product_unit = get_object_or_404(ProductUnit, id=product_unit_id)
     return JsonResponse({'write_off': product_unit.write_off})
+
+def get_storage_type_is_store(request):
+    storage_type_id = request.GET.get('id')
+    if storage_type_id:
+        try:
+            storage_type = StorageType.objects.get(id=storage_type_id)
+            return JsonResponse({'is_store': storage_type.is_store})
+        except StorageType.DoesNotExist:
+            return JsonResponse({'error': 'StorageType not found'}, status=404)
+    return JsonResponse({'error': 'No ID provided'}, status=400)
 
 class DashboardView(TemplateView):
     template_name = 'admin/dashboard.html'

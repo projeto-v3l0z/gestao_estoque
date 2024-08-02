@@ -12,7 +12,7 @@ $(document).ready(function() {
                     $('#id_origin_room').val(data.room).trigger('change');
                     $('#id_origin_shelf').val(data.shelf).trigger('change');
 
-                    updateFields(data);
+                    updateFields(data.location);
                 },
                 error: function(xhr, status, error) {
                     console.error("Error fetching data:", status, error);
@@ -23,54 +23,70 @@ $(document).ready(function() {
 
     var isCreationMode = window.location.href.indexOf('/add/') !== -1;
 
-    function updateFields() {
+    function updateFields(storageTypeId) {
         if (!isCreationMode) {
             return;
         }
-        var locationSelected = $('#id_destination_storage_type option:selected').text().trim();
+        $('.field-destination_building').hide();
+        if (storageTypeId) {
+            $.ajax({
+                url: '/get-storage-type-is-store/',
+                data: { 'id': storageTypeId },
+                success: function(data) {
+                    var isStore = data.is_store;
 
-        if (locationSelected === "Depósito") {
-            $('.field-destination_building').show();
-        } else {
-            $('.field-destination_building').hide();
-        }
+                    if (isStore) {
+                        $('.field-destination_building').show();
+                    } 
+                        
+                
 
-        var buildingSelected = $('#id_destination_building').val();
-        if (buildingSelected) {
-            getBuildingProperties(buildingSelected).then(function(properties) {
-                var hallSelected = $('#id_destination_hall').val();
-                var roomSelected = $('#id_destination_room').val();
-                var shelfSelected = $('#id_destination_shelf').val();
+                    var buildingSelected = $('#id_destination_building').val();
+                    if (buildingSelected) {
+                        getBuildingProperties(buildingSelected).then(function(properties) {
+                            var hallSelected = $('#id_destination_hall').val();
+                            var roomSelected = $('#id_destination_room').val();
+                            var shelfSelected = $('#id_destination_shelf').val();
 
-                if (properties.has_hall) {
-                    $('.field-destination_hall').show();
-                    updateHalls(buildingSelected, hallSelected);
-                } else {
-                    $('.field-destination_hall').hide();
-                }
+                            if (properties.has_hall) {
+                                $('.field-destination_hall').show();
+                                updateHalls(buildingSelected, hallSelected);
+                            } else {
+                                $('.field-destination_hall').hide();
+                            }
 
-                if (properties.has_room) {
-                    $('.field-destination_room').show();
-                    if (hallSelected) {
-                        updateRoomsByHall(hallSelected, roomSelected);
+                            if (properties.has_room) {
+                                $('.field-destination_room').show();
+                                if (hallSelected) {
+                                    updateRoomsByHall(hallSelected, roomSelected);
+                                } else {
+                                    updateRoomsByBuilding(buildingSelected, roomSelected);
+                                }
+                            } else {
+                                $('.field-destination_room').hide();
+                            }
+
+                            if (properties.has_shelf) {
+                                $('.field-destination_shelf').show();
+                                if (roomSelected) {
+                                    updateShelvesByRoom(roomSelected, shelfSelected);
+                                } else if (hallSelected) {
+                                    updateShelvesByHall(hallSelected, shelfSelected);
+                                } else {
+                                    updateShelvesByBuilding(buildingSelected, shelfSelected);
+                                }
+                            } else {
+                                $('.field-destination_shelf').hide();
+                            }
+                        });
                     } else {
-                        updateRoomsByBuilding(buildingSelected, roomSelected);
+                        $('.field-destination_hall').hide();
+                        $('.field-destination_room').hide();
+                        $('.field-destination_shelf').hide();
                     }
-                } else {
-                    $('.field-destination_room').hide();
-                }
-
-                if (properties.has_shelf) {
-                    $('.field-destination_shelf').show();
-                    if (roomSelected) {
-                        updateShelvesByRoom(roomSelected, shelfSelected);
-                    } else if (hallSelected) {
-                        updateShelvesByHall(hallSelected, shelfSelected);
-                    } else {
-                        updateShelvesByBuilding(buildingSelected, shelfSelected);
-                    }
-                } else {
-                    $('.field-destination_shelf').hide();
+                },
+                error: function() {
+                    console.error('Failed to fetch storage type data.');
                 }
             });
         } else {
@@ -232,20 +248,21 @@ $(document).ready(function() {
     }
 
     $('#id_destination_storage_type').change(function() {
-        updateFields();
+        updateFields($('#id_destination_storage_type').val());
     });
 
     $('#id_destination_building').change(function() {
-        updateFields();
+        updateFields($('#id_destination_storage_type').val());
     });
 
     $('#id_destination_hall').change(function() {
-        updateFields();
+        updateFields($('#id_destination_storage_type').val());
     });
 
     $('#id_destination_room').change(function() {
-        updateFields();
+        updateFields($('#id_destination_storage_type').val());
     });
 
-    updateFields();
+    // Initialize fields based on the current value of the storage type
+    updateFields($('#id_destination_storage_type').val());
 });
