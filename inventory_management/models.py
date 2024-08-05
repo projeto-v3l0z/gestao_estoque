@@ -147,7 +147,7 @@ class ProductUnit(models.Model):
                 self.generate_code()
 
             if not self.slug:
-                self.slug = slugify(f"{self.product.name}-{self.code}")
+                self.slug = slugify(f"{self.code}")
 
             if self.product.measure == 'u':
                 self.weight_length = 1
@@ -155,7 +155,7 @@ class ProductUnit(models.Model):
             super(ProductUnit, self).save(*args, **kwargs)
 
             if not self.slug:
-                self.slug = slugify(f"{self.product.name}-{self.code}")
+                self.slug = slugify(f"{self.product.id}")
                 super(ProductUnit, self).save(update_fields=['slug'])
 
             if self.quantity > 1:
@@ -176,7 +176,7 @@ class ProductUnit(models.Model):
                         quantity=1
                     )
                     new_unit.generate_code()
-                    new_unit.slug = slugify(f"{self.product.name}-{new_unit.code}")
+                    new_unit.slug = slugify(f"{new_unit.code}")
                     new_unit.save()
 
             self.__class__.objects.filter(id=self.id).update(quantity=1)

@@ -4,7 +4,7 @@
 <div class="row justify-content-center align-items-center g-2 py-3">
     <div class="col-12">
         <h1 class="">Minha área de trabalho</h1>
-        <div id="reader" class="qr-code-reader"></div> <!-- Movendo a área de leitura para o cabeçalho -->
+        <div id="reader" class="qr-code-reader"></div> 
     </div>
     <div class="col-12">
         <h2>Produtos na área de trabalho:</h2>
@@ -12,24 +12,20 @@
             <thead>
                 <tr>
                     <th>Produto</th>
-                    <th>Identificador</th>
+                    <th>Código</th>
                     <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
                 {% for workspace in object_list %}
                 <tr>
-                    <td>{{ workspace.product.product }}</td>
-                    <td>{{ workspace.product.id }}</td>
+                    <td>{{ workspace.product.product|title }}</td>
+                    <td>{{ workspace.product.code }}</td>
                     <td>
-                        <form method="POST">
-                            {% csrf_token %}
-                            <input type="hidden" name="remove" value="{{ workspace.product.id }}">
-                            <button type="submit" class="btn btn-outline-danger btn-sm">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-    
+                        <a href={% url "inventory_management:delete_workspace" code=workspace.product.code %} class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-trash"></i>
+                        </a>
+
                     </td>
                 </tr>
                 {% empty %}
@@ -57,6 +53,11 @@
                     </button>
                 </div>
             </div>
+        </div>
+        <div class="col-12 text-center">
+            {%if object_list %}
+            <h3>Produtos na área de trabalho: {{product_count}}</h3>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -102,6 +103,8 @@
                     <option value="None" selected>---------</option>
                     {% for storage_type in storage_types %}
                     <option value="{{ storage_type.id }}">{{ storage_type }}</option>
+                    {%empty%}
+                    <option value="None">Nenhum depósito cadastrado</option>
                     {% endfor %}
                 </select>
             </div>
@@ -147,7 +150,7 @@
                 <textarea name="observations" id="observations" class="form-control"></textarea>
             </div>
             <div class="col-12 text-center">
-                <button type="submit" id="transfer_btn" class="btn btn-primary"><i class="bi bi-arrow-right"></i> Transferir</button>
+                <button type="submit" id="transfer_btn" name="transfer_btn" class="btn btn-primary"><i class="bi bi-arrow-right"></i> Transferir</button>
             </div>
         </form>
     </div>            
@@ -207,40 +210,53 @@
     let qrCodeReadingActive = true;
 
     function onScanSuccess(decodedText, decodedResult) {
+        console.log("onScanSuccess called");
         if (!qrCodeReadingActive) return;
-
+    
         qrCodeReadingActive = false;
-
+    
         var url = decodedText;
-        var product_id = url.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/)[0];
-
-        $.ajax({
-            type: 'POST',
-            data: {
-                "product_id": product_id,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'
-            },
-            success: function (response) {
-                if (response.success){
-                    if (response.reload) {
-                        location.reload();
+        console.log("Decoded URL:", url);
+    
+        var match = url.match(/prd-\d+/i);
+        console.log("Regex match result:", match);
+    
+        if (match) {
+            var product_id = match[0];
+            console.log("Product ID:", product_id); 
+    
+            $.ajax({
+                type: 'POST',
+                data: {
+                    "product_id": product_id,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function (response) {
+                    if (response.success) {
+                        if (response.reload) {
+                            //alert(response.success);
+                            location.reload();
+                        }
+                        if (response.transfer) {
+                            var response = JSON.parse(response);
+                            alert(response);
+                            location.reload();
+                        }
                     }
-                    if (response.transfer) {
-                        var response = JSON.parse(response);
-                        alert(response.message);
-                    }
-                }
-            },
-            error: function (xhr, errmsg, err) {
-                console.log(xhr.status + ": " + xhr.responseText);
-                var response = JSON.parse(xhr.responseText);
-                var errorMessage = response.error;
-                alert(errorMessage);
-                location.reload();
-            },
-        });
+                },
+                error: function (xhr, errmsg, err) {
+                    console.log(xhr.status + ": " + xhr.responseText);
+                    var response = JSON.parse(xhr.responseText);
+                    var errorMessage = response.error;
+                    alert(errorMessage);
+                    location.reload();
+                },
+            });
+        } else {
+            alert("Código do produto não encontrado.");
+        }
     }
-
+    
     $(document).ready(function () {
         $('form').submit(function (event) {
             event.preventDefault();
@@ -298,7 +314,7 @@
                             $('#hallGroup').hide();
                             $('#roomGroup').hide();
                             $('#shelfGroup').hide();
-                            return; // Early return if is_store is false
+                            return;
                         }
     
                         var buildingSelected = $('#building').val();
