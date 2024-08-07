@@ -97,6 +97,7 @@
     <div class="offcanvas-body">
         <form method="post" class="row g-3">
             {% csrf_token %}
+            <input type="hidden" name="transfer" value="True">
             <div class="form-group">
                 <label for="location">Tipo de Depósito:</label>
                 <select name="location" id="location" class="form-select">
@@ -258,30 +259,31 @@
     }
     
     $(document).ready(function () {
-        $('form').submit(function (event) {
-            event.preventDefault();
-            
-            var formData = $(this).serialize();
-            
-            $.ajax({
-                type: 'POST',
-                data: formData,
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        if (response.reload) {
-                            location.reload();
-                        }
-                    } else {
-                        console.log(response.error);
+    $('form').submit(function (event) {
+        event.preventDefault();
+
+        var formData = $(this).serialize();
+        console.log("Form Data:", formData);  // Debug: Print form data
+
+        $.ajax({
+            type: 'POST',
+            data: formData,
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    if (response.reload) {
+                        location.reload();
                     }
-                },
-                error: function (xhr, errmsg, err) {
-                    console.log(xhr.status + ": " + xhr.responseText);
-                },
-            });
+                } else {
+                    console.log(response.error);
+                }
+            },
+            error: function (xhr, errmsg, err) {
+                console.log(xhr.status + ": " + xhr.responseText);
+            },
         });
     });
+});
 
     function onScanFailure(error) {
         console.warn(`Code scan error = ${error}`);
@@ -300,7 +302,7 @@
         function updateFields() {
             var locationSelected = $('#location').val();
     
-            if (locationSelected) {
+            if (locationSelected && locationSelected !== "None") {
                 $.ajax({
                     url: '/get-storage-type-is-store/',
                     data: { 'id': locationSelected },

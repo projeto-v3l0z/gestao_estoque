@@ -458,7 +458,6 @@ class WorkSpaceView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['write_off_destinations'] = WriteOffDestinations.objects.all()
-        # alterar para flag
         context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
         context['shelves'] = Shelf.objects.all()
         context['buildings'] = Building.objects.all()
@@ -466,48 +465,50 @@ class WorkSpaceView(ListView):
         context['halls'] = Hall.objects.all()
         context['product_count'] = WorkSpace.objects.filter(user=self.request.user).count()
         return context
-        
+
     def post(self, request, *args, **kwargs):
-        if 'clean' in request.POST:
-            WorkSpace.objects.filter(user=request.user).delete()
-            return JsonResponse({'success': 'Produtos removidos com sucesso', 'reload': True}, status=200)
-        
-        product_id = request.POST.get('product_id')
-        remove = request.POST.get('remove')
-        write_off_destination_id = request.POST.get('write_off_destination')
-        
-        if write_off_destination_id:
-            write_off_destination = get_object_or_404(WriteOffDestinations, pk=write_off_destination_id)
-            for product in WorkSpace.objects.filter(user=request.user):
-                product_unit = product.product
-                product_unit.write_off = True
-                product_unit.save()
-                
-                origin = product_unit.shelf if product_unit.shelf else product_unit.location
-                Write_off.objects.create(
-                    product_unit=product_unit,
-                    origin=origin,
-                    storage_type=StorageType.objects.get_or_create(name="Baixa")[0],
-                    write_off_date=timezone.now(),
-                    observations="Baixa de produto",
-                    write_off_destination=write_off_destination,
-                    created_by=request.user,
-                )
+        try:
+            print("POST data:", request.POST)  # Debug: Print the POST data
 
-            WorkSpace.objects.filter(user=request.user).delete()
-            return JsonResponse({'success': 'Produtos baixados com sucesso', 'reload': True}, status=200)
+            if 'clean' in request.POST:
+                print("Cleaning workspace")
+                WorkSpace.objects.filter(user=request.user).delete()
+                return JsonResponse({'success': 'Produtos removidos com sucesso', 'reload': True}, status=200)
 
-        if remove:
-            try:
-                product_id = request.POST.get('remove')
-                workspace_item = get_object_or_404(WorkSpace, user=request.user, product_code=product_id)
+            product_id = request.POST.get('product_id')
+            remove = request.POST.get('remove')
+            write_off_destination_id = request.POST.get('write_off_destination')
+
+            if write_off_destination_id:
+                print("Processing write off")
+                write_off_destination = get_object_or_404(WriteOffDestinations, pk=write_off_destination_id)
+                for product in WorkSpace.objects.filter(user=request.user):
+                    product_unit = product.product
+                    product_unit.write_off = True
+                    product_unit.save()
+                    
+                    origin = product_unit.shelf if product_unit.shelf else product_unit.location
+                    Write_off.objects.create(
+                        product_unit=product_unit,
+                        origin=origin,
+                        storage_type=StorageType.objects.get_or_create(name="Baixa")[0],
+                        write_off_date=timezone.now(),
+                        observations="Baixa de produto",
+                        write_off_destination=write_off_destination,
+                        created_by=request.user,
+                    )
+
+                WorkSpace.objects.filter(user=request.user).delete()
+                return JsonResponse({'success': 'Produtos baixados com sucesso', 'reload': True}, status=200)
+
+            if remove:
+                print("Removing product from workspace")
+                workspace_item = get_object_or_404(WorkSpace, user=request.user, product__code=remove)
                 workspace_item.delete()
                 return JsonResponse({'success': 'Produto removido da área de trabalho', 'reload': True}, status=200)
-            except ProductUnit.DoesNotExist:
-                return JsonResponse({'error': 'Produto não encontrado'}, status=400)
-            
-        if product_id:
-            try:
+
+            if product_id:
+                print("Adding product to workspace")
                 product = get_object_or_404(ProductUnit, code=product_id.upper())
                 if WorkSpace.objects.filter(user=request.user, product=product).exists():
                     return JsonResponse({'error': 'Produto já está na sua área de trabalho', 'reload': True}, status=400)
@@ -516,61 +517,77 @@ class WorkSpaceView(ListView):
                 else:
                     WorkSpace.objects.create(user=request.user, product=product)
                     return JsonResponse({'success': 'Produto adicionado à área de trabalho', 'reload': True}, status=200)
-            except ProductUnit.DoesNotExist:
-                return JsonResponse({'error': 'Produto não encontrado'}, status=400)
-        
-        if 'transfer_btn' in request.POST:
-            location_id = request.POST.get('location')
-            if location_id is None:
-                return JsonResponse({'error': 'ID de localização inválido'}, status=400)
+
+            if request.POST.get('transfer') is not None:  # Verificação ajustada
+                print("Processing transfer")
+                location_id = request.POST.get('location')
+                if not location_id or location_id == "None":
+                    return JsonResponse({'error': 'ID de localização inválido'}, status=400)
+
+                destination = get_object_or_404(StorageType, id=location_id)
+
+                building_id = request.POST.get('building')
+                building = Building.objects.filter(pk=building_id).first() if building_id else None
+
+                room_id = request.POST.get('room')
+                room = Rooms.objects.filter(pk=room_id).first() if room_id else None
+
+                hall_id = request.POST.get('hall')
+                hall = Hall.objects.filter(pk=hall_id).first() if hall_id else None
+
+                shelf_id = request.POST.get('shelf')
+                shelf = Shelf.objects.filter(pk=shelf_id).first() if shelf_id else None
             
-            destination = get_object_or_404(StorageType, id=location_id)
+                observations = request.POST.get('observations', '')
 
-            building = Building.objects.filter(pk=request.POST.get('building')).first()
-            room = Rooms.objects.filter(pk=request.POST.get('room')).first()
-            hall = Hall.objects.filter(pk=request.POST.get('hall')).first()
-            shelf = Shelf.objects.filter(pk=request.POST.get('shelf')).first()
-            observations = request.POST.get('observations', '')
+                for product in WorkSpace.objects.filter(user=request.user):
+                    product_unit = product.product
 
-            for product in WorkSpace.objects.filter(user=request.user):
-                product_unit = product.product
+                    StockTransfer.objects.create(
+                        product_unit=product_unit,
+                        origin_storage_type=product_unit.location,
+                        origin_building=product_unit.building,
+                        origin_hall=product_unit.hall,
+                        origin_room=product_unit.room,
+                        origin_shelf=product_unit.shelf,
+                        destination_storage_type=destination,
+                        destination_shelf=shelf,
+                        destination_building=building,
+                        destination_room=room,
+                        destination_hall=hall,
+                        transfer_date=timezone.now(),
+                        observations=observations,
+                        created_by=request.user,
+                    )
 
-                StockTransfer.objects.create(
-                    product_unit=product_unit,
-                    origin_storage_type=product_unit.location,
-                    origin_building=product_unit.building,
-                    origin_hall=product_unit.hall,
-                    origin_room=product_unit.room,
-                    origin_shelf=product_unit.shelf,
-                    destination_storage_type=destination,
-                    destination_shelf=shelf,
-                    destination_building=building,
-                    destination_room=room,
-                    destination_hall=hall,
-                    transfer_date=date.today(),
-                    observations=observations,
-                    created_by=request.user,
-                )
+                    product_unit.location = destination
 
-                product_unit.location = destination
+                    if destination.is_store:
+                        product_unit.building_id = building
+                        product_unit.room_id = room
+                        product_unit.hall_id = hall
+                        product_unit.shelf_id = shelf
+                    else:
+                        product_unit.building_id = None
+                        product_unit.room_id = None
+                        product_unit.hall_id = None
+                        product_unit.shelf_id = None
 
-                if destination.is_store:
-                    product_unit.building = building
-                    product_unit.room = room
-                    product_unit.hall = hall
-                    product_unit.shelf = shelf
-                else:
-                    product_unit.building = None
-                    product_unit.room = None
-                    product_unit.hall = None
-                    product_unit.shelf = None
+                    product_unit.save()
 
-                product_unit.save()
+                WorkSpace.objects.filter(user=request.user).delete()
+                return JsonResponse({'success': 'Produtos transferidos com sucesso', 'transfer': True, 'reload': True}, status=200)
+            else:
+                print("Transfer button not pressed")
 
-            WorkSpace.objects.filter(user=request.user).delete()
-            return JsonResponse({'success': 'Produtos transferidos com sucesso', 'transfer': True, 'reload': True}, status=200)
-        
+        except Exception as e:
+            print("Exception occurred:", str(e))  # Debug: Print the exception
+            return JsonResponse({'error': str(e)}, status=400)
+
+        print("Invalid action")  # Debug: Indicate invalid action
         return JsonResponse({'error': 'Ação inválida'}, status=400)
+
+
 
 
 def delete_workspace(request, code):
@@ -623,13 +640,14 @@ def get_write_off_status(request, product_unit_id):
 
 def get_storage_type_is_store(request):
     storage_type_id = request.GET.get('id')
-    if storage_type_id != None:
+    if storage_type_id is not None:
         try:
             storage_type = StorageType.objects.get(id=storage_type_id)
             return JsonResponse({'is_store': storage_type.is_store})
         except StorageType.DoesNotExist:
             return JsonResponse({'error': 'StorageType not found'}, status=404)
     return JsonResponse({'error': 'No ID provided'}, status=400)
+
 
 class DashboardView(TemplateView):
     template_name = 'admin/dashboard.html'
