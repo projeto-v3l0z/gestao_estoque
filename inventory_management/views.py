@@ -508,18 +508,16 @@ class WorkSpaceView(ListView):
                 return JsonResponse({'success': 'Produto removido da área de trabalho', 'reload': True}, status=200)
 
             if product_id:
-                print("Adding product to workspace")
                 product = get_object_or_404(ProductUnit, code=product_id.upper())
                 if WorkSpace.objects.filter(user=request.user, product=product).exists():
                     return JsonResponse({'error': 'Produto já está na sua área de trabalho', 'reload': True}, status=400)
-                elif product.write_off:
+                if product.write_off:
                     return JsonResponse({'error': 'Esse produto está baixado', 'reload': True}, status=400)
-                else:
-                    WorkSpace.objects.create(user=request.user, product=product)
-                    return JsonResponse({'success': 'Produto adicionado à área de trabalho', 'reload': True}, status=200)
+                
+                WorkSpace.objects.create(user=request.user, product=product)
+                return JsonResponse({'success': 'Produto adicionado à área de trabalho', 'reload': True}, status=200)
 
-            if request.POST.get('transfer') is not None:  # Verificação ajustada
-                print("Processing transfer")
+            if request.POST.get('transfer') is not None:
                 location_id = request.POST.get('location')
                 if not location_id or location_id == "None":
                     return JsonResponse({'error': 'ID de localização inválido'}, status=400)

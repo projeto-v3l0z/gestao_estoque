@@ -48,7 +48,7 @@
                                     - {{ transfer.destination_building }}
                                 {% endif %}
                         </td>
-                        <td>{{ transfer.observations }}</td>
+                        <td>{{ transfer.observations|default:"-" }}</td>
                         <td> {{ transfer.created_by }} </td>
                     </tr>
                     {% endfor %}
@@ -207,7 +207,7 @@
     {% else %}
         <div class="column d-flex flex-column justify-content-center align-items-center mt-4">
             <div class="col-12 col-md-3 d-flex mt-3 justify-content-center">    
-                <button type="button" class="btn btn-danger flex-fill w-100" data-toggle="modal" data-target="#confirmationModal">
+                <button type="button" class="btn btn-warning flex-fill w-100" data-toggle="modal" data-target="#confirmationModal">
                     <i class="bi bi-archive"></i> Dar baixa
                 </button>
         

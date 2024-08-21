@@ -133,7 +133,7 @@ class ProductUnit(models.Model):
     created_at = models.DateTimeField(_('Criado em'), auto_now_add=True, null=True, editable=False)
     updated_by = models.ForeignKey('auth.User', verbose_name=_('Atualizado por'), on_delete=models.CASCADE, related_name='productunit_updated_by', null=True, editable=False)
     updated_at = models.DateTimeField(_('Atualizado em'), auto_now=True, null=True, editable=False)
-
+    
     def get_measure(self):
         return self.product.get_measure_display()
 
@@ -367,8 +367,8 @@ class Building(models.Model):
         return self.name
 
     class Meta:
-        verbose_name_plural = "Depósitos"
-        verbose_name = "Depósito"
+        verbose_name_plural = "Loja"
+        verbose_name = "Lojas"
 
 
 class Hall (models.Model):
