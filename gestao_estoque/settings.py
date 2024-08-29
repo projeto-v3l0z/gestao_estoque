@@ -23,9 +23,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 
-# DEVELOPMENT
-# SECRET_KEY = 'django-insecure-c#!eeech!!g0xx9n$8ntso)+k61-&!ff3m@y21-l(2ynzpel6l'
-
 #PRODUCTION
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
@@ -37,8 +34,6 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS').split(',') if os.environ.get('AL
 # ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS').split(',') if os.environ.get('CSRF_TRUSTED_ORIGINS') else []
-
-
 
 
 # Application definition
