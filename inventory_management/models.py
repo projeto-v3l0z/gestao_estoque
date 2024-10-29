@@ -107,12 +107,14 @@ class Product(models.Model):
         return reverse('inventory_management:product_detail', kwargs={'slug': self.slug})
 
 def get_default_location():
-    return StorageType.objects.get_or_create(name="Hub")[0]
+    return StorageType.objects.get_or_create(name="Conferência")[0]
         
 class ProductUnit(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     code = models.CharField("Código", max_length=10, unique=True, editable=False)
     product = models.ForeignKey("Product", on_delete=models.CASCADE, verbose_name="Produto")
+    #sugestão trocar para FK
+    provider = models.CharField("Fornecedor", max_length=100, blank=True, null=True)
     location = models.ForeignKey('inventory_management.StorageType',default=get_default_location, on_delete=models.CASCADE, verbose_name="Localização")
     building = models.ForeignKey('inventory_management.Building', on_delete=models.CASCADE, verbose_name="Depósito", blank=True, null=True)
     room = models.ForeignKey('inventory_management.Rooms', on_delete=models.CASCADE, verbose_name="Sala", blank=True, null=True)
@@ -131,7 +133,7 @@ class ProductUnit(models.Model):
     created_at = models.DateTimeField(_('Criado em'), auto_now_add=True, null=True, editable=False)
     updated_by = models.ForeignKey('auth.User', verbose_name=_('Atualizado por'), on_delete=models.CASCADE, related_name='productunit_updated_by', null=True, editable=False)
     updated_at = models.DateTimeField(_('Atualizado em'), auto_now=True, null=True, editable=False)
-
+    
     def get_measure(self):
         return self.product.get_measure_display()
 
@@ -145,7 +147,7 @@ class ProductUnit(models.Model):
                 self.generate_code()
 
             if not self.slug:
-                self.slug = slugify(f"{self.product.name}-{self.code}")
+                self.slug = slugify(f"{self.code}")
 
             if self.product.measure == 'u':
                 self.weight_length = 1
@@ -153,7 +155,7 @@ class ProductUnit(models.Model):
             super(ProductUnit, self).save(*args, **kwargs)
 
             if not self.slug:
-                self.slug = slugify(f"{self.product.name}-{self.code}")
+                self.slug = slugify(f"{self.product.id}")
                 super(ProductUnit, self).save(update_fields=['slug'])
 
             if self.quantity > 1:
@@ -174,7 +176,7 @@ class ProductUnit(models.Model):
                         quantity=1
                     )
                     new_unit.generate_code()
-                    new_unit.slug = slugify(f"{self.product.name}-{new_unit.code}")
+                    new_unit.slug = slugify(f"{new_unit.code}")
                     new_unit.save()
 
             self.__class__.objects.filter(id=self.id).update(quantity=1)
@@ -365,8 +367,8 @@ class Building(models.Model):
         return self.name
 
     class Meta:
-        verbose_name_plural = "Depósitos"
-        verbose_name = "Depósito"
+        verbose_name_plural = "Loja"
+        verbose_name = "Lojas"
 
 
 class Hall (models.Model):
@@ -526,6 +528,7 @@ class StorageType(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField("Nome do Local", max_length=100)
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
+    is_store = models.BooleanField("É Loja?", default=False)
     created_by = models.ForeignKey('auth.User', verbose_name=_('Criado por'), on_delete=models.CASCADE, related_name='destinations_created_by', null=True, editable=False)
     created_at = models.DateTimeField(_('Criado em'), auto_now_add=True, null=True, editable=False)
     updated_by = models.ForeignKey('auth.User', verbose_name=_('Atualizado por'), on_delete=models.CASCADE, related_name='destinations_updated_by', null=True, editable=False)

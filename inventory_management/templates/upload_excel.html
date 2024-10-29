@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "admin/base.html" %}
 {% block title %}Upload Excel{% endblock %}
 {% block content %}
 <div class="container">
@@ -13,12 +13,14 @@
                 {% csrf_token %}
                 {{ form.as_p }}
                 <div class="text-center mt-3">
-                    <button type="submit" class="btn btn-primary">Carregar Dados</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i>
+                        Carregar Dados</button>
                 </div>
             </form>
         </div>
     </div>
-    {% if messages %}
+    {% comment %} {% if messages %}
     <div class="row mt-4">
         <div class="col d-flex justify-content-center">
             <div class="messages">
@@ -30,6 +32,6 @@
             </div>
         </div>
     </div>
-    {% endif %}
+    {% endif %} {% endcomment %}
 </div>
 {% endblock %}

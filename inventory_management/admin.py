@@ -73,12 +73,13 @@ class StockTransferInline(admin.TabularInline):
     
 @admin.register(ProductUnit)
 class ProductUnitAdmin(admin.ModelAdmin):
-    list_display = ('product', 'code' ,'location','shelf_or_none','weight_length_with_measure', 'write_off' , 'was_written_off' ,'qr_code_generated','purchase_date', "created_by", "created_at", "updated_by", "updated_at")
+    list_display = ('id','product', 'code' ,'location','shelf_or_none','weight_length_with_measure', 'write_off' , 'was_written_off' ,'qr_code_generated','purchase_date', "created_by", "created_at", "updated_by", "updated_at")
     search_fields = ('product__name', 'location__name', 'id', 'code')
     list_filter = ('product' ,'purchase_date', 'location', 'write_off', 'was_written_off' ,'qr_code_generated')
-    fields = ['product', 'location', 'building', 'hall', 'room', 'shelf', 'quantity', 'weight_length', 'incoming',]
+    fields = ['product', 'quantity', 'weight_length', 'incoming',]
     actions = [download_qr_codes, write_off_products, write_on_products]
     inlines = [ClothConsumptionInline, StockTransferInline]
+    
 
     class Media:
         js = (
@@ -102,7 +103,7 @@ class ProductUnitAdmin(admin.ModelAdmin):
         if obj.shelf:
             return obj.shelf
         return "N/A"
-    shelf_or_none.short_description = 'Prateleira'
+    shelf_or_none.short_description = 'Gaveta'
 
     def weight_length_with_measure(self, obj):
         if obj.product.measure != 'u':
@@ -134,7 +135,7 @@ class ProductUnitAdmin(admin.ModelAdmin):
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "location":
-            kwargs["queryset"] = StorageType.objects.exclude(name = "Baixa")
+            kwargs["queryset"] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def get_readonly_fields(self, request, obj=None):
@@ -183,11 +184,9 @@ class ProductUnitAdmin(admin.ModelAdmin):
 @admin.register(StockTransfer)
 class StockTransferAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'transfer_date', 'created_by', 'created_at', 'updated_by', 'updated_at')
-    search_fields = ('product_unit__product__name', 'origin__name', 'destination__name')
+    search_fields = ('product_unit__product__name', 'origin_building__name', 'origin_hall__name', 'origin_room__name', 'origin_shelf__name', 'destination_building__name', 'destination_hall__name', 'destination_room__name', 'destination_shelf__name', 'product_unit__product__code')
     list_filter = ('transfer_date', 'origin_shelf', 'destination_shelf')
     fields = ['product_unit', 'origin_storage_type','origin_building','origin_hall','origin_room', 'origin_shelf', 'destination_storage_type','destination_building', 'destination_hall', 'destination_room', 'destination_shelf', 'observations']
-
-    
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -196,7 +195,7 @@ class StockTransferAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "destination_storage_type":
-            kwargs["queryset"] = StorageType.objects.exclude(name = "Baixa")
+            kwargs["queryset"] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
     
     class Media:
@@ -207,6 +206,7 @@ class StockTransferAdmin(admin.ModelAdmin):
             obj.created_by = request.user
         obj.updated_by = request.user
         super().save_model(request, obj, form, change)
+
 
 
 @admin.register(Write_off)
@@ -223,7 +223,7 @@ class WriteOffAdmin(admin.ModelAdmin):
         if db_field.name == "storage_type":
             kwargs["queryset"] = StorageType.objects.filter(name = "Baixa")
         if db_field.name == "recomission_storage_type":
-            kwargs["queryset"] = StorageType.objects.exclude(name = "Baixa")
+            kwargs["queryset"] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def write_off_destination_or_none(self, obj):

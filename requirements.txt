@@ -7,7 +7,6 @@ django-jazzmin==3.0.0
 et-xmlfile==1.1.0
 fonttools==4.53.1
 kiwisolver==1.4.5
-matplotlib==3.8.4
 mysqlclient==2.2.4
 numpy==2.0.1
 openpyxl==3.1.5
