@@ -23,78 +23,65 @@ def create_or_update_products_with_pattern(sender, instance, created, **kwargs):
         Product.objects.filter(pattern=instance).delete()
         
 
+from django.db import transaction
+
 @receiver(post_save, sender=Product)
 def update_or_create_related_products(sender, instance, created, **kwargs):
     if created:
         if "liso" in instance.name.lower() and instance.color is None:
-            for color in Color.objects.all():
-                Product.objects.create(
-                    name=f"{instance.name.capitalize()} {color.name}",
-                    description=instance.description,
-                    price=instance.price,
-                    measure=instance.measure,
-                    width=instance.width,
-                    composition=instance.composition,
-                    image=instance.image,
-                    code=instance.code,
-                    ncm=instance.ncm,
-                    color=color,
-                    pattern=instance.pattern,
-                    created_by=instance.created_by,
-                    updated_by=instance.updated_by,
-                    slug=slugify(f"{instance.name} {color.name}")
-                )
+            # Armazena os dados do produto original antes de excluí-lo
+            product_data = {
+                "description": instance.description,
+                "price": instance.price,
+                "measure": instance.measure,
+                "width": instance.width,
+                "composition": instance.composition,
+                "image": instance.image,
+                "code": instance.code,
+                "ncm": instance.ncm,
+                "pattern": instance.pattern,
+                "created_by": instance.created_by,
+                "updated_by": instance.updated_by,
+            }
+            with transaction.atomic():
+                # Cria variações para cada cor
+                for color in Color.objects.all():
+                    Product.objects.create(
+                        name=f"{instance.name.capitalize()} {color.name}",
+                        color=color,
+                        slug=slugify(f"{instance.name} {color.name}"),
+                        **product_data,
+                    )
+                # Excluir o produto original
+                instance.delete()
+
         if "estampado" in instance.name.lower() and instance.pattern is None:
-            for pattern in Pattern.objects.all():
-                Product.objects.create(
-                    name=f"{instance.name.capitalize()} {pattern.name}",
-                    description=instance.description,
-                    price=instance.price,
-                    measure=instance.measure,
-                    width=instance.width,
-                    composition=instance.composition,
-                    image=instance.image,
-                    code=instance.code,
-                    ncm=instance.ncm,
-                    color=instance.color,
-                    pattern=pattern,
-                    created_by=instance.created_by,
-                    updated_by=instance.updated_by,
-                    slug=slugify(f"{instance.name} {pattern.name}")
-                )
-    else:
-        if "liso" in instance.name.lower():
-            prefix = instance.name
-            if instance.color and instance.name.lower().endswith(instance.color.name.lower()):
-                prefix = instance.name[:-len(instance.color.name)].strip()
-            Product.objects.filter(
-                Q(name__icontains=prefix) & ~Q(pk=instance.pk)
-            ).update(
-                description=instance.description,
-                price=instance.price,
-                measure=instance.measure,
-                width=instance.width,
-                composition=instance.composition,
-                code=instance.code,
-                ncm=instance.ncm,
-                updated_by=instance.updated_by
-            )
-        if "estampado" in instance.name.lower():
-            prefix = instance.name
-            if instance.pattern and instance.name.lower().endswith(instance.pattern.name.lower()):
-                prefix = instance.name[:-len(instance.pattern.name)].strip()
-            Product.objects.filter(
-                Q(name__icontains=prefix) & ~Q(pk=instance.pk) 
-            ).update(
-                description=instance.description,
-                price=instance.price,
-                measure=instance.measure,
-                width=instance.width,
-                composition=instance.composition,
-                code=instance.code,
-                ncm=instance.ncm,
-                updated_by=instance.updated_by
-            )
+            # Armazena os dados do produto original antes de excluí-lo
+            product_data = {
+                "description": instance.description,
+                "price": instance.price,
+                "measure": instance.measure,
+                "width": instance.width,
+                "composition": instance.composition,
+                "image": instance.image,
+                "code": instance.code,
+                "ncm": instance.ncm,
+                "color": instance.color,
+                "created_by": instance.created_by,
+                "updated_by": instance.updated_by,
+            }
+            with transaction.atomic():
+                # Cria variações para cada estampa
+                for pattern in Pattern.objects.all():
+                    Product.objects.create(
+                        name=f"{instance.name.capitalize()} {pattern.name}",
+                        pattern=pattern,
+                        slug=slugify(f"{instance.name} {pattern.name}"),
+                        **product_data,
+                    )
+                # Excluir o produto original
+                instance.delete()
+
             
 @receiver(post_delete, sender=Product)
 def delete_related_products(sender, instance, **kwargs):
