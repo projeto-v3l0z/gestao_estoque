@@ -97,6 +97,8 @@ class ProductUnitDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['can_transfer'] = self.request.user.has_perm('inventory_management.add_stocktransfer')
+        context['can_write_off'] = self.request.user.has_perm('inventory_management.add_write_off')
         context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
