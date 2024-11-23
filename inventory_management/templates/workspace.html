@@ -37,16 +37,20 @@
         </table>
         <div class="col-12 g-3">
             <div class="row justify-content-center align-items-center">
+                {% if can_transfer%}
                 <div class="col-md-4 col-12 mb-2">
                     <button type="button" class="btn btn-success w-100 {% if object_list %} {% else %} disabled {% endif %} " data-bs-toggle="offcanvas" data-bs-target="#offcanvasExample" aria-controls="offcanvasExample">
                         <i class="bi bi-arrow-up-circle"></i> Transferir produtos
                     </button>
-                </div>   
+                </div>  
+                {% endif %}
+                {% if can_write_off %} 
                 <div class="col-md-4 col-12 mb-2">
                     <button type="button" class="btn btn-warning w-100 {% if object_list %} {% else %} disabled {% endif %} " data-toggle="modal" data-target="#confirmationModalBaixa">
                         <i class="bi bi-archive"></i> Baixar produtos
                     </button>
                 </div>
+                {% endif %}
                 <div class="col-md-4 col-12 mb-2">
                     <button type="button" class="btn btn-danger w-100 {% if object_list %} {% else %} disabled {% endif %} " data-toggle="modal" data-target="#confirmationModal">
                         <i class="bi bi-trash"></i> Limpar área de trabalho

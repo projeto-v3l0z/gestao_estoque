@@ -76,9 +76,13 @@
                         <li><a href="#">Drop Down 2</a></li>
                     </ul>
                 </li> -->
+
+                
                 <li><a class="nav-link" href="{% url 'inventory_management:scan_qr' %}">Escanear QR Code</a></li>
                 {% if user.is_authenticated %}
+                {% if "inventory_management.view_workspace" in user_permissions%}
                     <li><a class="nav-link" href="{% url 'inventory_management:workspace' %}">Área de Trabalho</a></li>
+                {% endif %}
                 {% endif %}
                 {% if user.is_staff %}
                     <li><a class="nav-link" href="{% url 'admin:index' %}">Administração</a></li>
