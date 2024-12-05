@@ -51,7 +51,7 @@ class ProductListView(ListView):
         queryset = super().get_queryset()
         search = self.request.GET.get('search')
         if search:
-            queryset = queryset.filter(name__startswith=search)
+            queryset = queryset.filter(name__icontains=search)
         return queryset.order_by('name')
 
 
@@ -68,7 +68,7 @@ class ProductDetailView(DetailView):
         search = self.request.GET.get('search')
 
         if search:
-            product_units = product_units.filter(id__contains=search)
+            product_units = product_units.filter(id__icontains=search)
 
         if write_off == 'baixados':
             product_units = product_units.filter(write_off=True)
