@@ -676,103 +676,103 @@ class UploadExcelView(View):
         if form.is_valid():
             arquivo = request.FILES['file']
             try:
-                df = pd.read_excel(arquivo, sheet_name=None)  # Lê todas as planilhas
+                df = pd.read_excel(arquivo, sheet_name=None)
                 sheets = df.keys()
 
-                produtos_adicionados, produtos_atualizados = self.processar_produtos(df.get('PRODUTOS'))
-                adicionados, atualizados = self.processar_localizacoes(df.get('LOCALIZAÇÕES'))
+                products_added, products_updated = self.process_products(df.get('PRODUTOS'))
 
-                self.exibir_mensagem_sucesso(produtos_adicionados, produtos_atualizados, adicionados, atualizados)
+                locations_added, locations_updated = self.process_locations(df.get('LOCALIZAÇÕES'))
+
+                self.show_success_message(products_added, products_updated, locations_added, locations_updated)
             except Exception as e:
-                self.exibir_mensagem_erro(request, f'Ocorreu um erro ao processar o arquivo: {e}')
+                self.show_error_message(request, f'Erro ao processar arquivo: {e}')
                 return redirect('inventory_management:load_data')
 
             return redirect('inventory_management:load_data')
 
-        self.exibir_mensagem_erro(request, 'Ocorreu um erro no upload do arquivo. Verifique o formato e tente novamente.')
+        self.show_error_message(request, 'Ocorreu um erro com o upload do arquivo. Por favor, verifique o formato e tente novamente.')
         return render(request, self.template_name, {'form': form})
 
-    def processar_produtos(self, produtos_df):
-        produtos_adicionados = 0
-        produtos_atualizados = 0
+    def process_products(self, products_df):
+        added = 0
+        updated = 0
 
-        if produtos_df is not None:
-            produtos_df.columns = ['nome', 'preco', 'ncm', 'unidade']
-            for _, row in produtos_df.iterrows():
-                created = self.criar_produto_ou_atualizar(row)
+        if products_df is not None:
+            products_df.columns = ['nome', 'preco', 'ncm', 'unidade']
+            for _, row in products_df.iterrows():
+                created = self.create_or_update_product(row)
                 if created:
-                    produtos_adicionados += 1
+                    added += 1
                 else:
-                    produtos_atualizados += 1
+                    updated += 1
 
-        return produtos_adicionados, produtos_atualizados
+        return added, updated
 
-    def processar_localizacoes(self, localizacoes_df):
-        adicionados = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
-        atualizados = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
-
-        if localizacoes_df is not None:
-            localizacoes_df.columns = ['deposito', 'corredor', 'sala', 'gaveta']
-            for _, row in localizacoes_df.iterrows():
-                adicionados, atualizados = self.processar_linha(row, adicionados, atualizados)
-
-        return adicionados, atualizados
-
-    def criar_produto_ou_atualizar(self, row):
-        unidade_mapeada = self.MEASURE_MAPPING.get(row['unidade'].upper(), 'u')
-        nome_lower = row['nome'].strip().lower()
-        produto, created = Product.objects.update_or_create(
-            name=nome_lower,
+    def create_or_update_product(self, row):
+        mapped_unit = self.MEASURE_MAPPING.get(row['unit'].upper(), 'u')
+        name_lower = row['name'].strip().lower()
+        product, created = Product.objects.update_or_create(
+            name=name_lower,
             defaults={
                 'ncm': row['ncm'],
                 'price': row['preco'],
-                'measure': unidade_mapeada,
+                'measure': mapped_unit,
                 'updated_by': self.request.user,
                 'updated_at': timezone.now()
             }
         )
         if created:
-            produto.created_by = self.request.user
-            produto.created_at = timezone.now()
+            product.created_by = self.request.user
+            product.created_at = timezone.now()
         else:
-            produto.updated_by = self.request.user
-            produto.updated_at = timezone.now()
-        produto.save()
+            product.updated_by = self.request.user
+            product.updated_at = timezone.now()
+        product.save()
         return created
 
-    def processar_linha(self, row, adicionados, atualizados):
+    def process_locations(self, locations_df):
+        added = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
+        updated = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
+
+        if locations_df is not None:
+            locations_df.columns = ['depositos', 'corredores', 'salas', 'gavetas']
+            for _, row in locations_df.iterrows():
+                added, updated = self.create_or_update_location(row, added, updated)
+
+        return added, updated
+
+    def create_or_update_location(self, row, added, updated):
 
         building, created = Building.objects.update_or_create(
-            name=row['deposito'],
+            name=row['depositos'],
             defaults={'updated_at': timezone.now()}
         )
-        if created:
-            adicionados['building'] += 1
-        else:
-            atualizados['building'] += 1
+        added, updated = self.update_counts(added, updated, 'building', created)
 
-        hall, created = Hall.objects.update_or_create(
-            name=row['corredor'],
-            building=building,
-            defaults={'updated_at': timezone.now()}
-        )
-        if created:
-            adicionados['hall'] += 1
+        hall_name = row['corredores'].strip().upper()
+        if hall_name != "SEM":
+            hall, created = Hall.objects.update_or_create(
+                name=row['corredores'],
+                building=building,
+                defaults={'updated_at': timezone.now()}
+            )
+            added, updated = self.update_counts(added, updated, 'hall', created)
         else:
-            atualizados['hall'] += 1
+            hall = None
 
-        room, created = Rooms.objects.update_or_create(
-            name=row['sala'],
-            hall=hall,
-            building=building,
-            defaults={'updated_at': timezone.now()}
-        )
-        if created:
-            adicionados['room'] += 1
+        room_name = row['salas'].strip().upper()
+        if room_name != "SEM":
+            room, created = Rooms.objects.update_or_create(
+                name=row['salas'],
+                hall=hall,
+                building=building,
+                defaults={'updated_at': timezone.now()}
+            )
+            added, updated = self.update_counts(added, updated, 'room', created)
         else:
-            atualizados['room'] += 1
+            room = None
 
-        shelves = self.processar_intervalo_gavetas(row['gaveta'], room, hall, building)
+        shelves = self.process_shelf_range(row['gavetas'], room, hall, building)
         for shelf in shelves:
             shelf_obj, created = Shelf.objects.update_or_create(
                 name=str(shelf),
@@ -781,37 +781,38 @@ class UploadExcelView(View):
                 building=building,
                 defaults={'updated_at': timezone.now()}
             )
-            if created:
-                adicionados['shelf'] += 1
-            else:
-                atualizados['shelf'] += 1
+            added, updated = self.update_counts(added, updated, 'shelf', created)
 
-        return adicionados, atualizados
+        return added, updated
 
-    def processar_intervalo_gavetas(self, intervalo, room, hall, building):
+    def process_shelf_range(self, shelf_range, room, hall, building):
         shelves = []
-        # Regex para capturar os intervalos, como "DE 01 A 26"
-        match = re.match(r"DE (\d+) A (\d+)", intervalo.strip())
+        match = re.match(r"DE (\d+) A (\d+)", shelf_range.strip())
         if match:
             start = int(match.group(1))
             end = int(match.group(2))
-            for i in range(start, end + 1):
-                shelves.append(i)  # Adiciona o número da gaveta diretamente
-        elif intervalo.strip().upper() == "SEM":
-            shelves.append("SEM")  # Trata o caso de "SEM"
-
+            shelves.extend(range(start, end + 1))
+        elif shelf_range.strip().upper() == "SEM":
+            return shelves
         return shelves
 
-    def exibir_mensagem_sucesso(self, produtos_adicionados, produtos_atualizados, adicionados, atualizados):
-        mensagem = (
-            f'{produtos_adicionados} produtos foram adicionados e {produtos_atualizados} produtos atualizados. '
-            f'Dados de localizações: '
-            f'{adicionados["building"]} prédios adicionados, {atualizados["building"]} atualizados; '
-            f'{adicionados["hall"]} corredores adicionados, {atualizados["hall"]} atualizados; '
-            f'{adicionados["room"]} salas adicionadas, {atualizados["room"]} atualizadas; '
-            f'{adicionados["shelf"]} gavetas adicionadas, {atualizados["shelf"]} atualizadas.'
-        )
-        messages.success(self.request, mensagem)
+    def update_counts(self, added, updated, entity, created):
+        if created:
+            added[entity] += 1
+        else:
+            updated[entity] += 1
+        return added, updated
 
-    def exibir_mensagem_erro(self, request, mensagem):
-        messages.error(request, mensagem)
+    def show_success_message(self, products_added, products_updated, locations_added, locations_updated):
+        message = (
+            f'{products_added} produtos adicionados, {products_updated} produtos atualizados. '
+            f'Dados de Localização: '
+            f'{locations_added["building"]} Depósitos adicionados, {locations_updated["building"]} atualizados; '
+            f'{locations_added["hall"]} Corredores adicionados, {locations_updated["hall"]} atualizados; '
+            f'{locations_added["room"]} Salas adicionadas, {locations_updated["room"]} atualizados; '
+            f'{locations_added["shelf"]} Gavetas adicionadas, {locations_updated["shelf"]} atualizados.'
+        )
+        messages.success(self.request, message)
+
+    def show_error_message(self, request, message):
+        messages.error(request, message)
