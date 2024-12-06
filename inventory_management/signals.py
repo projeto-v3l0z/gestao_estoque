@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.db import transaction
 from .models import *
 
 @receiver(post_save, sender=Color)
@@ -21,15 +22,12 @@ def create_or_update_products_with_pattern(sender, instance, created, **kwargs):
             Product.objects.create(name=f"{product.name.capitalize()} {instance.name}", description=product.description, price=product.price, measure=product.measure, width=product.width, composition=product.composition, image=product.image, code=product.code, ncm=product.ncm, color=product.color, pattern=instance, created_by=product.created_by, updated_by=product.updated_by)
     else:
         Product.objects.filter(pattern=instance).delete()
-        
 
-from django.db import transaction
 
 @receiver(post_save, sender=Product)
 def update_or_create_related_products(sender, instance, created, **kwargs):
     if created:
         if "liso" in instance.name.lower() and instance.color is None:
-            # Armazena os dados do produto original antes de excluí-lo
             product_data = {
                 "description": instance.description,
                 "price": instance.price,
@@ -52,11 +50,8 @@ def update_or_create_related_products(sender, instance, created, **kwargs):
                         slug=slugify(f"{instance.name} {color.name}"),
                         **product_data,
                     )
-                # Excluir o produto original
-                instance.delete()
 
         if "estampado" in instance.name.lower() and instance.pattern is None:
-            # Armazena os dados do produto original antes de excluí-lo
             product_data = {
                 "description": instance.description,
                 "price": instance.price,
@@ -79,10 +74,7 @@ def update_or_create_related_products(sender, instance, created, **kwargs):
                         slug=slugify(f"{instance.name} {pattern.name}"),
                         **product_data,
                     )
-                # Excluir o produto original
-                instance.delete()
 
-            
 @receiver(post_delete, sender=Product)
 def delete_related_products(sender, instance, **kwargs):
     if "liso" in instance.name.lower():
@@ -91,7 +83,7 @@ def delete_related_products(sender, instance, **kwargs):
         ).delete()
     elif "estampado" in instance.name.lower():
         Product.objects.filter(
-            Q(name__icontains=instance.name) & ~Q(pk=instance.pk) 
+            Q(name__icontains=instance.name) & ~Q(pk=instance.pk)
         ).delete()
 
 
