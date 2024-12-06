@@ -18,6 +18,7 @@ from django.db.models import Count, Sum
 from django.db.models import F, ExpressionWrapper, DecimalField
 import io
 import base64
+import re
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.db.models import Max, Sum
@@ -39,7 +40,6 @@ from django.contrib import messages
 
 class IndexView(TemplateView):
     template_name = 'index.html'
-
 
 class ProductListView(ListView):
     model = Product
@@ -97,6 +97,8 @@ class ProductUnitDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['can_transfer'] = self.request.user.has_perm('inventory_management.add_stocktransfer')
+        context['can_write_off'] = self.request.user.has_perm('inventory_management.add_write_off')
         context['storage_types'] = StorageType.objects.exclude(name__icontains=["Baixa", "Conferência"])
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
@@ -457,6 +459,8 @@ class WorkSpaceView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['can_transfer'] = self.request.user.has_perm('inventory_management.add_stocktransfer')
+        context['can_write_off'] = self.request.user.has_perm('inventory_management.add_write_off')
         context['write_off_destinations'] = WriteOffDestinations.objects.all()
         context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
         context['shelves'] = Shelf.objects.all()
@@ -653,6 +657,15 @@ class DashboardView(TemplateView):
 class UploadExcelView(View):
     template_name = 'upload_excel.html'
 
+    MEASURE_MAPPING = {
+        'KG': 'kg',
+        'MT': 'm',
+        'CM': 'cm',
+        'G': 'g',
+        'UND': 'u',
+        'UN': 'u'
+    }
+
     def get(self, request):
         form = UploadExcelForm()
         return render(request, self.template_name, {'form': form})
@@ -663,33 +676,72 @@ class UploadExcelView(View):
         if form.is_valid():
             arquivo = request.FILES['file']
             try:
-                df = pd.read_excel(arquivo, sheet_name='LOCALIZAÇÕES')
-                print("Nomes das colunas do DataFrame:", df.columns)
+                df = pd.read_excel(arquivo, sheet_name=None)  # Lê todas as planilhas
+                sheets = df.keys()
 
-                df.columns = ['deposito', 'corredor', 'sala', 'gaveta']
+                produtos_adicionados, produtos_atualizados = self.processar_produtos(df.get('PRODUTOS'))
+                adicionados, atualizados = self.processar_localizacoes(df.get('LOCALIZAÇÕES'))
 
-                adicionados = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
-                atualizados = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
-
-                for _, row in df.iterrows():
-                    adicionados, atualizados = self.processar_linha(row, adicionados, atualizados)
-
-                messages.success(request, (
-                    f"Dados processados com sucesso: "
-                    f"{adicionados['building']} prédios adicionados, {atualizados['building']} atualizados; "
-                    f"{adicionados['hall']} corredores adicionados, {atualizados['hall']} atualizados; "
-                    f"{adicionados['room']} salas adicionadas, {atualizados['room']} atualizadas; "
-                    f"{adicionados['shelf']} gavetas adicionadas, {atualizados['shelf']} atualizadas."
-                ))
+                self.exibir_mensagem_sucesso(produtos_adicionados, produtos_atualizados, adicionados, atualizados)
             except Exception as e:
-                messages.error(request, f"Ocorreu um erro ao processar o arquivo: {e}")
+                self.exibir_mensagem_erro(request, f'Ocorreu um erro ao processar o arquivo: {e}')
+                return redirect('inventory_management:load_data')
 
             return redirect('inventory_management:load_data')
 
-        messages.error(request, "Ocorreu um erro no upload do arquivo. Verifique o formato e tente novamente.")
+        self.exibir_mensagem_erro(request, 'Ocorreu um erro no upload do arquivo. Verifique o formato e tente novamente.')
         return render(request, self.template_name, {'form': form})
 
+    def processar_produtos(self, produtos_df):
+        produtos_adicionados = 0
+        produtos_atualizados = 0
+
+        if produtos_df is not None:
+            produtos_df.columns = ['nome', 'preco', 'ncm', 'unidade']
+            for _, row in produtos_df.iterrows():
+                created = self.criar_produto_ou_atualizar(row)
+                if created:
+                    produtos_adicionados += 1
+                else:
+                    produtos_atualizados += 1
+
+        return produtos_adicionados, produtos_atualizados
+
+    def processar_localizacoes(self, localizacoes_df):
+        adicionados = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
+        atualizados = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
+
+        if localizacoes_df is not None:
+            localizacoes_df.columns = ['deposito', 'corredor', 'sala', 'gaveta']
+            for _, row in localizacoes_df.iterrows():
+                adicionados, atualizados = self.processar_linha(row, adicionados, atualizados)
+
+        return adicionados, atualizados
+
+    def criar_produto_ou_atualizar(self, row):
+        unidade_mapeada = self.MEASURE_MAPPING.get(row['unidade'].upper(), 'u')
+        nome_lower = row['nome'].strip().lower()
+        produto, created = Product.objects.update_or_create(
+            name=nome_lower,
+            defaults={
+                'ncm': row['ncm'],
+                'price': row['preco'],
+                'measure': unidade_mapeada,
+                'updated_by': self.request.user,
+                'updated_at': timezone.now()
+            }
+        )
+        if created:
+            produto.created_by = self.request.user
+            produto.created_at = timezone.now()
+        else:
+            produto.updated_by = self.request.user
+            produto.updated_at = timezone.now()
+        produto.save()
+        return created
+
     def processar_linha(self, row, adicionados, atualizados):
+
         building, created = Building.objects.update_or_create(
             name=row['deposito'],
             defaults={'updated_at': timezone.now()}
@@ -720,16 +772,46 @@ class UploadExcelView(View):
         else:
             atualizados['room'] += 1
 
-        shelf, created = Shelf.objects.update_or_create(
-            name=row['gaveta'],
-            room=room,
-            hall=hall,
-            building=building,
-            defaults={'updated_at': timezone.now()}
-        )
-        if created:
-            adicionados['shelf'] += 1
-        else:
-            atualizados['shelf'] += 1
+        shelves = self.processar_intervalo_gavetas(row['gaveta'], room, hall, building)
+        for shelf in shelves:
+            shelf_obj, created = Shelf.objects.update_or_create(
+                name=str(shelf),
+                room=room,
+                hall=hall,
+                building=building,
+                defaults={'updated_at': timezone.now()}
+            )
+            if created:
+                adicionados['shelf'] += 1
+            else:
+                atualizados['shelf'] += 1
 
         return adicionados, atualizados
+
+    def processar_intervalo_gavetas(self, intervalo, room, hall, building):
+        shelves = []
+        # Regex para capturar os intervalos, como "DE 01 A 26"
+        match = re.match(r"DE (\d+) A (\d+)", intervalo.strip())
+        if match:
+            start = int(match.group(1))
+            end = int(match.group(2))
+            for i in range(start, end + 1):
+                shelves.append(i)  # Adiciona o número da gaveta diretamente
+        elif intervalo.strip().upper() == "SEM":
+            shelves.append("SEM")  # Trata o caso de "SEM"
+
+        return shelves
+
+    def exibir_mensagem_sucesso(self, produtos_adicionados, produtos_atualizados, adicionados, atualizados):
+        mensagem = (
+            f'{produtos_adicionados} produtos foram adicionados e {produtos_atualizados} produtos atualizados. '
+            f'Dados de localizações: '
+            f'{adicionados["building"]} prédios adicionados, {atualizados["building"]} atualizados; '
+            f'{adicionados["hall"]} corredores adicionados, {atualizados["hall"]} atualizados; '
+            f'{adicionados["room"]} salas adicionadas, {atualizados["room"]} atualizadas; '
+            f'{adicionados["shelf"]} gavetas adicionadas, {atualizados["shelf"]} atualizadas.'
+        )
+        messages.success(self.request, mensagem)
+
+    def exibir_mensagem_erro(self, request, mensagem):
+        messages.error(request, mensagem)

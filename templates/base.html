@@ -76,9 +76,13 @@
                         <li><a href="#">Drop Down 2</a></li>
                     </ul>
                 </li> -->
+
+                
                 <li><a class="nav-link" href="{% url 'inventory_management:scan_qr' %}">Escanear QR Code</a></li>
                 {% if user.is_authenticated %}
+                {% if "inventory_management.view_workspace" in user_permissions%}
                     <li><a class="nav-link" href="{% url 'inventory_management:workspace' %}">Área de Trabalho</a></li>
+                {% endif %}
                 {% endif %}
                 {% if user.is_staff %}
                     <li><a class="nav-link" href="{% url 'admin:index' %}">Administração</a></li>
@@ -126,6 +130,8 @@
         class="bi bi-arrow-up-short"></i></a>
 
 <!-- Vendor JS Files -->
+
+
 <script src="{% static 'OnePage/assets/vendor/purecounter/purecounter_vanilla.js' %}"></script>
 <script src="{% static 'OnePage/assets/vendor/aos/aos.js' %}"></script>
 <script src="{% static 'OnePage/assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
@@ -138,6 +144,48 @@
 <script src="{% static 'OnePage/assets/js/main.js' %}"></script>
 
 {% block extra_scripts %}{% endblock extra_scripts %}
+
+{% block extra_head %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function disableButtons() {
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(function(button) {
+            button.disabled = true;
+        });
+    }
+
+    function enableButtons() {
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(function(button) {
+            button.disabled = false;
+        });
+    }
+
+    // Desabilitar botões ao enviar o formulário
+    document.querySelectorAll('form').forEach(function(form) {
+        form.addEventListener('submit', function() {
+            disableButtons();
+        });
+    });
+
+    // Desabilitar botões durante requisições AJAX
+    document.addEventListener('ajaxStart', function() {
+        disableButtons();
+    });
+
+    document.addEventListener('ajaxStop', function() {
+        enableButtons();
+    });
+
+    // Para lidar com navegação de página (recarregamento)
+    window.addEventListener('beforeunload', function () {
+        disableButtons();
+    });
+});
+</script>
+{% endblock %}
+
 </body>
 
 </html>
