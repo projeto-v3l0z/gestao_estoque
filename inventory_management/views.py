@@ -68,7 +68,7 @@ class ProductDetailView(DetailView):
         search = self.request.GET.get('search')
 
         if search:
-            product_units = product_units.filter(id__icontains=search)
+            product_units = product_units.filter(id__contains=search)
 
         if write_off == 'baixados':
             product_units = product_units.filter(write_off=True)
@@ -97,7 +97,7 @@ class ProductUnitDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
+        context['storage_types'] = StorageType.objects.exclude(name__icontains=["Baixa", "Conferência"])
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
         context['halls'] = Hall.objects.all()
