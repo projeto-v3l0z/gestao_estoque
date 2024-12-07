@@ -27,6 +27,7 @@ from .forms import UploadExcelForm
 import pandas as pd
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from reportlab.lib.utils import simpleSplit
 
 
 
@@ -328,16 +329,31 @@ class GetProductLocationShelfView(View):
         except ProductUnit.DoesNotExist:
             return JsonResponse({}, status=404)
 
+def wrap_text(text, max_width, canvas, font_name, font_size):
+    canvas.setFont(font_name, font_size)
+    words = text.split()
+    lines = []
+    current_line = ""
+    for word in words:
+        test_line = f"{current_line} {word}".strip()
+        if canvas.stringWidth(test_line, font_name, font_size) <= max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    return lines
+
 def calculate_items_per_page(page_width, page_height, qr_size, columns):
     available_width = page_width - 100
     available_height = page_height - 100
 
     max_columns = columns
-    max_rows = available_height // (qr_size + 20)
+    max_rows = available_height // (qr_size + 40)  # Ajuste para acomodar o texto extra
     items_per_page = max_rows * max_columns
 
     return items_per_page
-
 
 def generate_qr_codes(request):
     host = request.get_host()
@@ -371,6 +387,7 @@ def generate_qr_codes(request):
                 c = canvas.Canvas(buffer, pagesize=letter)
 
                 x_offset = 50
+                top_margin = 200
                 qr_size = get_qr_size(size_preset)
                 page_width, page_height = letter
                 if size_preset == 'pequeno':
@@ -379,47 +396,47 @@ def generate_qr_codes(request):
                     columns = 3
                 elif size_preset == 'grande':
                     columns = 2
+                    top_margin = 300
 
                 items_per_page = calculate_items_per_page(page_width, page_height, qr_size, columns)
 
                 pdfmetrics.registerFont(TTFont('VeraBd', 'VeraBd.ttf'))
+                
+
+              
 
                 for idx, (qr, item) in enumerate(qr_codes):
                     row = idx // columns
                     col = idx % columns
-                    page_idx = idx // items_per_page
-
-                    if size_preset == 'pequeno':
-                        y_coordinate = page_height - 200 - (row % (items_per_page // columns)) * (qr_size + 25)
-                        x_coordinate = 27 + x_offset + col * (qr_size + 20)
-                        text_x_coordinate = x_coordinate - 10
-                        text_y_coordinate = y_coordinate + qr_size + 2
-                        text_x_coordinate2 = x_coordinate + 37.5
-                        text_y_coordinate2 = y_coordinate - qr_size + 95
-                        c.setFont("VeraBd", 7 )
-                    elif size_preset == 'medio':
-                        y_coordinate = page_height - 200 - (row % (items_per_page // columns)) * (qr_size + 25)
-                        x_coordinate = 13 + x_offset + col * (qr_size + 20)
-                        text_x_coordinate = x_coordinate
-                        text_y_coordinate = y_coordinate + qr_size + 2
-                        text_x_coordinate2 = x_coordinate + 58.5
-                        text_y_coordinate2 = y_coordinate - qr_size + 150
-                        c.setFont("VeraBd", 8.5 )
-                    elif size_preset == 'grande':
-                        y_coordinate = page_height - 250 - (row % (items_per_page // columns)) * (qr_size + 25)
-                        x_coordinate = 50 + x_offset + col * (qr_size + 20)
-                        text_x_coordinate = x_coordinate - 5
-                        text_y_coordinate = y_coordinate + qr_size + 2
-                        text_x_coordinate2 = x_coordinate + 79.5
-                        text_y_coordinate2 = y_coordinate - qr_size + 200
-                        c.setFont("VeraBd", 11 )
 
                     if idx > 0 and idx % items_per_page == 0:
                         c.showPage()
 
-                    c.drawString(text_x_coordinate, text_y_coordinate, item.product.name.upper())
+                    # Ajustar a posição inicial do QR Code e do texto com base na margem superior
+                    y_coordinate = page_height - top_margin - (row % (items_per_page // columns)) * (qr_size + 80)
+                    x_coordinate = 50 + x_offset + col * (qr_size + 20)
+
+                    # Nome do produto (acima do QR Code)
+                    product_name = item.product.name.upper()
+                    max_width = qr_size
+                    wrapped_text = wrap_text(product_name, max_width, c, "VeraBd", 9)  # Função para quebrar o texto
+                    total_text_height = len(wrapped_text) * 11 
+                    text_start_y = y_coordinate + qr_size + total_text_height + 1  # Começar pelo topo do texto
+
+                    for line in wrapped_text:
+                        text_width = c.stringWidth(line, "VeraBd", 9)
+                        line_x = x_coordinate + (qr_size - text_width) / 2
+                        text_start_y -= 10  # Subtrair o espaçamento por linha
+                        c.drawString(line_x, text_start_y, line)
+
+                    # Desenhar o QR Code
                     c.drawInlineImage(qr, x_coordinate, y_coordinate, width=qr_size, height=qr_size)
-                    c.drawString(text_x_coordinate2, text_y_coordinate2, item.code)
+
+                    # Código do produto (abaixo do QR Code)
+                    product_code = item.code
+                    text_width = c.stringWidth(product_code, "VeraBd", 9)
+                    code_x = x_coordinate + (qr_size - text_width) / 2
+                    c.drawString(code_x, y_coordinate - 15, product_code)
 
                 c.showPage()
                 c.save()
