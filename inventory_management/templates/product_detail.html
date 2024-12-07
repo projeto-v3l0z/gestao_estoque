@@ -99,14 +99,18 @@
                 <div class="col-md-12 fs-5">
                     {{ object.description|linebreaks }}
                 </div>
+                {% if object.width %}
                 <div class="col-md-12">
                     <h2>Largura</h2>
                     <p>{{ object.width }}m</p>
                 </div>
+                {% endif %}
+                {% if object.composition %}
                 <div class="col-md-12">
                     <h2>Composição</h2>
                     <p>{{ object.composition }}</p>
                 </div>
+                {% endif %}
                 <div class="col-md-12">
                     <h3>Unidade de medida: {{object.get_measure }}</h3>
                 </div>

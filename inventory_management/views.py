@@ -16,7 +16,7 @@ import re
 from decimal import Decimal
 from django.db.models import Max, Sum
 from django.core.paginator import Paginator, PageNotAnInteger
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -26,6 +26,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from .forms import UploadExcelForm
 import pandas as pd
 from django.contrib import messages
+from django.contrib.auth.mixins import PermissionRequiredMixin
 
 
 
@@ -441,9 +442,10 @@ def get_qr_size(size_preset):
 
 
 @method_decorator(login_required, name='dispatch')
-class WorkSpaceView(ListView):
+class WorkSpaceView(PermissionRequiredMixin ,ListView):
     template_name = 'workspace.html'
     model = WorkSpace
+    permission_required = 'inventory_management.view_workspace'
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -642,10 +644,14 @@ def get_storage_type_is_store(request):
             return JsonResponse({'error': 'StorageType not found'}, status=404)
     return JsonResponse({'error': 'No ID provided'}, status=400)
 
+def check_admin(user):
+    return user.is_superuser
 
+@method_decorator(user_passes_test(check_admin), name='dispatch')
 class DashboardView(TemplateView):
     template_name = 'admin/dashboard.html'
-
+    
+@method_decorator(user_passes_test(check_admin), name='dispatch')
 class UploadExcelView(View):
     template_name = 'upload_excel.html'
 
