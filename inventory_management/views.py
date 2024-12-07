@@ -45,7 +45,7 @@ class ProductListView(ListView):
         queryset = super().get_queryset()
         search = self.request.GET.get('search')
         if search:
-            queryset = queryset.filter(name__startswith=search)
+            queryset = queryset.filter(name__icontains=search)
         return queryset.order_by('name')
 
 
@@ -58,11 +58,28 @@ class ProductDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         product = self.get_object()
         write_off = self.request.GET.get('write_off')
-        product_units = product.productunit_set.all()
+        location_id = self.request.GET.get('location')
+        building_id = self.request.GET.get('building')
+        room_id = self.request.GET.get('room')
+        hall_id = self.request.GET.get('hall')
+        shelf_id = self.request.GET.get('shelf')
         search = self.request.GET.get('search')
 
+        product_units = product.productunit_set.all()
+
         if search:
-            product_units = product_units.filter(id__contains=search)
+           product_units = product_units.filter(id__contains=search)
+
+        if location_id:
+            product_units = product_units.filter(location__id=location_id)
+        if building_id:
+            product_units = product_units.filter(building__id=building_id)
+        if room_id:
+            product_units = product_units.filter(room__id=room_id)
+        if hall_id:
+            product_units = product_units.filter(hall__id=hall_id)
+        if shelf_id:
+            product_units = product_units.filter(shelf__id=shelf_id)
 
         if write_off == 'baixados':
             product_units = product_units.filter(write_off=True)
@@ -82,6 +99,13 @@ class ProductDetailView(DetailView):
         context['total_weight_length'] = total_weight_length if total_weight_length else 0
         context['product_units'] = product_units_page
         context['page_obj'] = product_units_page
+
+        # Passando os dados de filtro
+        context['locations'] = StorageType.objects.exclude(name__in=["Baixa"])
+        context['buildings'] = Building.objects.all()
+        context['rooms'] = Rooms.objects.all()
+        context['halls'] = Hall.objects.all()
+        context['shelves'] = Shelf.objects.all()
 
         return context
 
