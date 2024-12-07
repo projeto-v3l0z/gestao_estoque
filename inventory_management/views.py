@@ -1,10 +1,8 @@
-from django.views.generic import TemplateView, ListView, DetailView, FormView
-from django.urls import reverse_lazy
+from django.views.generic import TemplateView, ListView, DetailView
 from django.http import JsonResponse
 from django.views import View
 from .models import *
 from django.shortcuts import redirect
-from datetime import date
 from .forms import QRCodeForm
 from django.http import HttpResponse
 import qrcode
@@ -13,14 +11,9 @@ from reportlab.lib.pagesizes import letter
 from django.shortcuts import render
 from io import BytesIO
 from django.utils import timezone
-from datetime import timedelta
-from django.db.models import Count, Sum
-from django.db.models import F, ExpressionWrapper, DecimalField
-import io
-import base64
+from django.db.models import Sum
 import re
 from decimal import Decimal
-from django.contrib.auth.models import User
 from django.db.models import Max, Sum
 from django.core.paginator import Paginator, PageNotAnInteger
 from django.contrib.auth.decorators import login_required
@@ -28,9 +21,7 @@ from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
-from django.db.models.functions import TruncMonth
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.pdfmetrics import registerFontFamily
 from reportlab.pdfbase.ttfonts import TTFont
 from .forms import UploadExcelForm
 import pandas as pd
@@ -46,6 +37,7 @@ class ProductListView(ListView):
     template_name = 'product_list.html'
     context_object_name = 'products'
     paginate_by = 10
+
 
     def get_queryset(self):
         queryset = super().get_queryset()
