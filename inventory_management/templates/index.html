@@ -31,6 +31,7 @@
           </div>
         </a>
       </div>
+      {% if request.user.is_staff %}
       <div class="col-md-6 col-lg-3 d-flex align-items-stretch mb-5 mb-lg-0" data-aos="zoom-in" data-aos-delay="200">
         <a href="{% url 'admin:index' %}" class="d-flex align-items-stretch mb-5 mb-lg-0">
           <div class="icon-box square-icon-box">
@@ -40,6 +41,7 @@
           </div>
         </a>
       </div>
+      {% endif %}
     </div>
 
   </div>

@@ -75,7 +75,7 @@ class StockTransferInline(admin.TabularInline):
 class ProductUnitAdmin(admin.ModelAdmin):
     list_display = ('id','product', 'code' ,'location','shelf_or_none','weight_length_with_measure', 'write_off' , 'was_written_off' ,'qr_code_generated','purchase_date', "created_by", "created_at", "updated_by", "updated_at")
     search_fields = ('product__name', 'location__name', 'id', 'code')
-    list_filter = ('product' ,'purchase_date', 'location', 'write_off', 'was_written_off' ,'qr_code_generated')
+    list_filter = ('product' ,'purchase_date', 'location','building', 'hall', 'room','shelf', 'write_off', 'was_written_off' ,'qr_code_generated')
     fields = ['product', 'quantity', 'weight_length', 'incoming',]
     actions = [download_qr_codes, write_off_products, write_on_products]
     inlines = [ClothConsumptionInline, StockTransferInline]
@@ -159,7 +159,24 @@ class ProductUnitAdmin(admin.ModelAdmin):
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
     def add_view(self, request, form_url='', extra_context=None):
+        location = request.GET.get('location', None)
+        building = request.GET.get('building', None)
+        hall = request.GET.get('hall', None)
+        room = request.GET.get('room', None)
+        shelf = request.GET.get('shelf', None)
+        
+        # Passe os valores necessários para o template
         extra_context = extra_context or {}
+        extra_context['locations'] = StorageType.objects.all()
+        extra_context['buildings'] = Building.objects.all()
+        extra_context['halls'] = Hall.objects.all()
+        extra_context['rooms'] = Rooms.objects.all()
+        extra_context['shelves'] = Shelf.objects.all()
+        extra_context['current_location'] = location
+        extra_context['current_building'] = building
+        extra_context['current_hall'] = hall
+        extra_context['current_room'] = room
+        extra_context['current_shelf'] = shelf
         extra_context['show_custom_qr_button'] = True
         return super().add_view(request, form_url, extra_context=extra_context)
 

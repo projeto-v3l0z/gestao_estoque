@@ -336,18 +336,24 @@
                 <div class="col-md-12 fs-5">
                     {{ object.product.description|linebreaks }}
                 </div>
+                {% if object.product.width %}
                 <div class="col-md-12">
                     <h2>Largura</h2>
                     <p>{{ object.product.width }}m</p>
                 </div>
+                {% endif %}
+                {% if object.product.composition %}
                 <div class="col-md-12">
                     <h2>Composição</h2>
                     <p>{{ object.product.composition }}</p>
                 </div>
+                {% endif %}
+                {% if object.product.incoming %}
                 <div class="col-md-12">
                     <h2>Rendimento:</h2>
                     <p>{{ object.incoming }}</p>
                 </div>
+                {% endif %}
                 <div class="col-md-12">
                     <h3>Unidade de medida: {{ object.product.get_measure }}</h3>
                 </div>
