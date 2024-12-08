@@ -28,17 +28,19 @@ import pandas as pd
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from reportlab.lib.utils import simpleSplit
+from django.contrib.auth import logout
 
 
 
 class IndexView(TemplateView):
     template_name = 'index.html'
 
-class ProductListView(ListView):
+class ProductListView(PermissionRequiredMixin, ListView):
     model = Product
     template_name = 'product_list.html'
     context_object_name = 'products'
     paginate_by = 10
+    permission_required = 'inventory_management.view_product'
 
 
     def get_queryset(self):
@@ -50,9 +52,10 @@ class ProductListView(ListView):
 
 
 
-class ProductDetailView(DetailView):
+class ProductDetailView(PermissionRequiredMixin, DetailView):
     model = Product
     template_name = 'product_detail.html'
+    permission_required = 'inventory_management.view_product'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -109,14 +112,13 @@ class ProductDetailView(DetailView):
 
         return context
 
-class ProductUnitDetailView(DetailView):
+class ProductUnitDetailView(PermissionRequiredMixin, DetailView):
     model = ProductUnit
     template_name = 'product_unit_detail.html'
+    permission_required = 'inventory_management.view_productunit'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['can_transfer'] = self.request.user.has_perm('inventory_management.add_stocktransfer')
-        context['can_write_off'] = self.request.user.has_perm('inventory_management.add_write_off')
         context['storage_types'] = StorageType.objects.exclude(name__icontains=["Baixa", "Conferência"])
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
@@ -333,15 +335,17 @@ class AboutView(TemplateView):
     template_name = 'about.html'
 
 
-class AdressesView(ListView):
+class AdressesView(PermissionRequiredMixin, ListView):
     model = Building
     template_name = 'adresses.html'
     context_object_name = 'adresses'
+    permission_required = 'inventory_management.view_building'
 
 
-class AddressDetailView(DetailView):
+class AddressDetailView(PermissionRequiredMixin, DetailView):
     model = Building
     template_name = 'address.html'
+    permission_required = 'inventory_management.view_building'
 
 
 class GetProductLocationShelfView(View):
@@ -625,12 +629,11 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
         return JsonResponse({'error': 'Ação inválida'}, status=400)
 
 
-
-
 def delete_workspace(request, code):
     code = code.upper()
     WorkSpace.objects.filter(user=request.user, product__code=code).delete()
     return HttpResponseRedirect(reverse('inventory_management:workspace'))
+
 
 def get_building_properties(request):
     building_id = request.GET.get('building_id')
@@ -855,3 +858,8 @@ class UploadExcelView(View):
 
     def show_error_message(self, request, message):
         messages.error(request, message)
+        
+        
+def logout_view(request):
+    logout(request)
+    return redirect('admin:login')

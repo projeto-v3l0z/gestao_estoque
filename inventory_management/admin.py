@@ -10,11 +10,23 @@ from io import BytesIO
 import qrcode
 from django.contrib import admin
 from .models import *
+from django.contrib.auth.models import Permission
 
 admin.site.site_header = 'Gestão de Estoque'
 admin.site.site_title = 'Administração'
 admin.site.index_title = 'Gestão de Estoque'
 
+
+@admin.register(Permission)
+class PermissionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'content_type', 'codename')
+    search_fields = ('name', 'codename')
+
+    def save_model(self, request, obj, form, change):
+        if not change:  
+            obj.created_by = request.user
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
