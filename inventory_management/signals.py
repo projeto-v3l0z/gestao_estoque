@@ -7,20 +7,20 @@ from .models import *
 
 @receiver(post_save, sender=Color)
 def create_or_update_products_with_color(sender, instance, created, **kwargs):
-    if created:
-        for product in Product.objects.filter(name__contains="liso", color__isnull=True):
-            Product.objects.create(name=f"{product.name.capitalize()} {instance.name}", description=product.description, price=product.price, measure=product.measure, width=product.width, composition=product.composition, image=product.image, code=product.code, ncm=product.ncm, color=instance, pattern=product.pattern, created_by=product.created_by, updated_by=product.updated_by)
-    else:
-        Product.objects.filter(color=instance).delete()
+    # if created:
+    for product in Product.objects.filter(name__contains="liso", color__isnull=True):
+        Product.objects.create(name=f"{product.name.capitalize()} {instance.name}", description=product.description, price=product.price, measure=product.measure, width=product.width, composition=product.composition, image=product.image, code=product.code, ncm=product.ncm, color=instance, pattern=product.pattern, created_by=product.created_by, updated_by=product.updated_by)
+    # else:
+    #     Product.objects.filter(color=instance).delete()
 
 
 @receiver(post_save, sender=Pattern)
 def create_or_update_products_with_pattern(sender, instance, created, **kwargs):
-    if created:
-        for product in Product.objects.filter(name__contains="estampado", pattern__isnull=True):
-            Product.objects.create(name=f"{product.name.capitalize()} {instance.name}", description=product.description, price=product.price, measure=product.measure, width=product.width, composition=product.composition, image=product.image, code=product.code, ncm=product.ncm, color=product.color, pattern=instance, created_by=product.created_by, updated_by=product.updated_by)
-    else:
-        Product.objects.filter(pattern=instance).delete()
+    # if created:
+    for product in Product.objects.filter(name__contains="estampado", pattern__isnull=True):
+        Product.objects.create(name=f"{product.name.capitalize()} {instance.name}", description=product.description, price=product.price, measure=product.measure, width=product.width, composition=product.composition, image=product.image, code=product.code, ncm=product.ncm, color=product.color, pattern=instance, created_by=product.created_by, updated_by=product.updated_by)
+    # else:
+    #     Product.objects.filter(pattern=instance).delete()
         
 
 from django.db import transaction
