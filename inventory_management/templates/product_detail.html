@@ -9,19 +9,82 @@
         <p>{{ object.description|linebreaks }}</p>
         <h2>Preço</h2>
         <p class="h5">R$ {{ object.price }}</p>
-        {% if object.image %}  
+        {% if object.image %}
         <figure class="col-12 col-md-6">
             <img src="{{ object.image.url }}" class="img-fluid" alt="{{ object.name }}">
             <figcaption class="figure-caption text-center"> {{ object.name }}<br></figcaption>
         </figure>
         {% endif %}
-    </div>  
-    
-    {% if object.productunit_set.count != 0 %}         
+    </div>
+
+    {% if object.productunit_set.count != 0 %}
     <div class="col-md-12">
+        <!-- Button trigger offcanvas -->
+       
+
+        <!-- Offcanvas Filters -->
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="filtersOffcanvas" aria-labelledby="filtersOffcanvasLabel">
+            <div class="offcanvas-header">
+                <h5 id="filtersOffcanvasLabel">Filtros de Localização</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body">
+                <form id="location_filter_form" method="GET" action="">
+                    <div class="mb-3">
+                        <label for="location">Tipo de Depósito:</label>
+                        <select name="location" id="location" class="form-select">
+                            <option value="">Selecione um Local</option>
+                            {% for location in locations %}
+                            <option value="{{ location.id }}"{% if request.GET.location == location.id %}selected{% endif %}>{{ location.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3" id="buildingGroup">
+                        <label for="building" class="form-label">Filtrar por Edifício</label>
+                        <select name="building" class="form-select" id="building">
+                            <option value="">Selecione um Edifício</option>
+                            {% for building in buildings %}
+                            <option value="{{ building.id }}" {% if request.GET.building == building.id %}selected{% endif %}>{{ building.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3" id="hallGroup">
+                        <label for="hall" class="form-label">Filtrar por Corredor</label>
+                        <select name="hall" class="form-select" id="hall">
+                            <option value="">Selecione um Corredor</option>
+                            {% for hall in halls %}
+                            <option value="{{ hall.id }}" {% if request.GET.hall == hall.id %}selected{% endif %}>{{ hall.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3" id="roomGroup">
+                        <label for="room" class="form-label">Filtrar por Sala</label>
+                        <select name="room" class="form-select" id="room">
+                            <option value="">Selecione uma Sala</option>
+                            {% for room in rooms %}
+                            <option value="{{ room.id }}" {% if request.GET.room == room.id %}selected{% endif %}>{{ room.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3" id="shelfGroup">
+                        <label for="shelf" class="form-label">Filtrar por Gaveta</label>
+                        <select name="shelf" class="form-select" id="shelf">
+                            <option value="">Selecione uma Gaveta</option>
+                            {% for shelf in shelves %}
+                            <option value="{{ shelf.id }}" {% if request.GET.shelf == shelf.id %}selected{% endif %}>{{ shelf.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
+                </form>
+            </div>
+            
+        </div>
+        
+
         <form id="filter_search_form" method="GET" action="" class="mb-3">
             <div class="input-group">
-                <input type="text" name="search" class="form-control" placeholder="Pesquisar por ID do produto">
+                <input type="text" name="search" value="{{ request.GET.search }}" class="form-control" placeholder="Pesquisar por ID do produto">
                 <button type="submit" class="btn btn-primary">Pesquisar</button>
             </div>
         </form>
@@ -29,13 +92,18 @@
             <div class="input-group mb-3">
                 <label for="write_off" class="input-group-text">Filtrar por Baixa</label>
                 <select name="write_off" class="form-select">
-                    <option value="false">Não Baixados</option>
-                    <option value="baixados">Baixados</option>
-                    <option value="todos">Todos</option>
+                    <option value="false" {% if request.GET.write_off == "false" %}selected{% endif %}>Não Baixados</option>
+                    <option value="baixados" {% if request.GET.write_off == "baixados" %}selected{% endif %}>Baixados</option>
+                    <option value="todos" {% if request.GET.write_off == "todos" %}selected{% endif %}>Todos</option>
                 </select>
                 <button type="submit" class="btn btn-primary">Filtrar</button>
             </div>
         </form>
+    </div>
+    <div class="col-12 d-flex justify-content-center">
+        <button class="btn btn-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#filtersOffcanvas" aria-controls="filtersOffcanvas">
+            Filtros de Localização
+        </button>
     </div>
     <div class="col-12">
         <h2>Unidades</h2>
@@ -67,22 +135,22 @@
             <nav aria-label="Page navigation">
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
-                        <li class="page-item"><a class="page-link" href="?page=1">Primeira</a></li>
-                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>
+                        <li class="page-item"><a class="page-link" href="?page=1{% if request.GET.write_off %}&write_off={{ request.GET.write_off }}{% endif %}">Primeira</a></li>
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.write_off %}&write_off={{ request.GET.write_off }}{% endif %}">Anterior</a></li>
                     {% endif %}
                     {% for num in page_obj.paginator.page_range %}
                         {% if page_obj.number == num %}
-                            <li class="page-item active"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                            <li class="page-item active"><a class="page-link" href="?page={{ num }}{% if request.GET.write_off %}&write_off={{ request.GET.write_off }}{% endif %}">{{ num }}</a></li>
                         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}{% if request.GET.write_off %}&write_off={{ request.GET.write_off }}{% endif %}">{{ num }}</a></li>
                         {% endif %}
                     {% endfor %}
                     {% if page_obj.has_next %}
-                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Proxima</a></li>
-                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última</a></li>
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.write_off %}&write_off={{ request.GET.write_off }}{% endif %}">Proxima</a></li>
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.write_off %}&write_off={{ request.GET.write_off }}{% endif %}">Última</a></li>
                     {% endif %}
                 </ul>
-            </nav>   
+            </nav>
         </div> 
     </div>
     <h4 class="d-flex justify-content-center"><strong>Total: {{total_weight_length}} {{object.get_measure|lower }}</strong></h4>
@@ -99,14 +167,18 @@
                 <div class="col-md-12 fs-5">
                     {{ object.description|linebreaks }}
                 </div>
+                {% if object.width %}
                 <div class="col-md-12">
                     <h2>Largura</h2>
                     <p>{{ object.width }}m</p>
                 </div>
+                {% endif %}
+                {% if object.composition %}
                 <div class="col-md-12">
                     <h2>Composição</h2>
                     <p>{{ object.composition }}</p>
                 </div>
+                {% endif %}
                 <div class="col-md-12">
                     <h3>Unidade de medida: {{object.get_measure }}</h3>
                 </div>
@@ -126,4 +198,221 @@
     </div>
 </div>
 {% endif %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        function updateFields() {
+            var locationSelected = $('#location').val();
+    
+            if (locationSelected) {
+                $.ajax({
+                    url: '/get-storage-type-is-store/',
+                    data: { 'id': locationSelected },
+                    success: function(data) {
+                        var isStore = data.is_store;
+    
+                        if (isStore) {
+                            $('#buildingGroup').show();
+                        } else {
+                            $('#buildingGroup').hide();
+                            $('#hallGroup').hide();
+                            $('#roomGroup').hide();
+                            $('#shelfGroup').hide();
+                            return; // Early return if is_store is false
+                        }
+    
+                        var buildingSelected = $('#building').val();
+                        if (buildingSelected) {
+                            getBuildingProperties(buildingSelected).then(function(properties) {
+                                var hallSelected = $('#hall').val();
+                                var roomSelected = $('#room').val();
+                                var shelfSelected = $('#shelf').val();
+    
+                                if (properties.has_hall) {
+                                    $('#hallGroup').show();
+                                    updateHalls(buildingSelected, hallSelected).then(function() {
+                                        if (properties.has_room) {
+                                            $('#roomGroup').show();
+                                            if (hallSelected) {
+                                                updateRoomsByHall(hallSelected, roomSelected).then(function() {
+                                                    if (properties.has_shelf) {
+                                                        $('#shelfGroup').show();
+                                                        updateShelvesByRoom(roomSelected, shelfSelected);
+                                                    } else {
+                                                        $('#shelfGroup').hide();
+                                                    }
+                                                });
+                                            } else {
+                                                updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
+                                                    if (properties.has_shelf) {
+                                                        $('#shelfGroup').show();
+                                                        updateShelvesByBuilding(buildingSelected, shelfSelected);
+                                                    } else {
+                                                        $('#shelfGroup').hide();
+                                                    }
+                                                });
+                                            }
+                                        } else {
+                                            $('#roomGroup').hide();
+                                            $('#shelfGroup').hide();
+                                        }
+                                    });
+                                } else {
+                                    $('#hallGroup').hide();
+                                    if (properties.has_room) {
+                                        $('#roomGroup').show();
+                                        updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
+                                            if (properties.has_shelf) {
+                                                $('#shelfGroup').show();
+                                                updateShelvesByBuilding(buildingSelected, shelfSelected);
+                                            } else {
+                                                $('#shelfGroup').hide();
+                                            }
+                                        });
+                                    } else {
+                                        $('#roomGroup').hide();
+                                        $('#shelfGroup').hide();
+                                    }
+                                }
+                            });
+                        } else {
+                            $('#hallGroup').hide();
+                            $('#roomGroup').hide();
+                            $('#shelfGroup').hide();
+                        }
+                    },
+                    error: function() {
+                        console.error('Failed to fetch storage type data.');
+                    }
+                });
+            } else {
+                $('#buildingGroup').hide();
+                $('#hallGroup').hide();
+                $('#roomGroup').hide();
+                $('#shelfGroup').hide();
+            }
+        }
+    
+        function getBuildingProperties(buildingId) {
+            return $.ajax({
+                url: '/get-building-properties/',
+                data: { 'building_id': buildingId }
+            });
+        }
+    
+        function updateHalls(buildingId, selectedHall) {
+            return $.ajax({
+                url: '/get-halls/',
+                data: { 'building_id': buildingId },
+                success: function(data) {
+                    $('#hall').empty();
+                    $('#hall').append($('<option>').text('---------').attr('value', ''));
+                    $.each(data, function(index, value) {
+                        var option = $('<option>').text(value.name).attr('value', value.id);
+                        if (value.id == selectedHall) {
+                            option.attr('selected', 'selected');
+                        }
+                        $('#hall').append(option);
+                    });
+                }
+            });
+        }
+    
+        function updateRoomsByBuilding(buildingId, selectedRoom) {
+            return $.ajax({
+                url: '/get-rooms/',
+                data: { 'building_id': buildingId },
+                success: function(data) {
+                    $('#room').empty();
+                    $('#room').append($('<option>').text('---------').attr('value', ''));
+                    $.each(data, function(index, value) {
+                        var option = $('<option>').text(value.name).attr('value', value.id);
+                        if (value.id == selectedRoom) {
+                            option.attr('selected', 'selected');
+                        }
+                        $('#room').append(option);
+                    });
+                }
+            });
+        }
+    
+        function updateRoomsByHall(hallId, selectedRoom) {
+            return $.ajax({
+                url: '/get-rooms/',
+                data: { 'hall_id': hallId },
+                success: function(data) {
+                    $('#room').empty();
+                    $('#room').append($('<option>').text('---------').attr('value', ''));
+                    $.each(data, function(index, value) {
+                        var option = $('<option>').text(value.name).attr('value', value.id);
+                        if (value.id == selectedRoom) {
+                            option.attr('selected', 'selected');
+                        }
+                        $('#room').append(option);
+                    });
+                }
+            });
+        }
+    
+        function updateShelvesByBuilding(buildingId, selectedShelf) {
+            return $.ajax({
+                url: '/get-shelves/',
+                data: { 'building_id': buildingId },
+                success: function(data) {
+                    $('#shelf').empty();
+                    $('#shelf').append($('<option>').text('---------').attr('value', ''));
+                    $.each(data, function(index, value) {
+                        var option = $('<option>').text(value.name).attr('value', value.id);
+                        if (value.id == selectedShelf) {
+                            option.attr('selected', 'selected');
+                        }
+                        $('#shelf').append(option);
+                    });
+                }
+            });
+        }
+    
+        function updateShelvesByRoom(roomId, selectedShelf) {
+            return $.ajax({
+                url: '/get-shelves/',
+                data: { 'room_id': roomId },
+                success: function(data) {
+                    $('#shelf').empty();
+                    $('#shelf').append($('<option>').text('---------').attr('value', ''));
+                    $.each(data, function(index, value) {
+                        var option = $('<option>').text(value.name).attr('value', value.id);
+                        if (value.id == selectedShelf) {
+                            option.attr('selected', 'selected');
+                        }
+                        $('#shelf').append(option);
+                    });
+                }
+            });
+        }
+    
+        $('#location').change(function() {
+            updateFields();
+        });
+    
+        $('#building').change(function() {
+            updateFields();
+        });
+    
+        $('#hall').change(function() {
+            updateFields();
+        });
+    
+        $('#room').change(function() {
+            updateFields();
+        });
+    
+        $('#shelf').change(function() {
+            updateFields();
+        });
+    
+        updateFields();
+    });
+</script>
+
+
 {% endblock %}

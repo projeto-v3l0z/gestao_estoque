@@ -23,4 +23,5 @@ urlpatterns = [
     path('get-storage-type-is-store/', get_storage_type_is_store, name='get_storage_type_is_store'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('carregar-dados/', UploadExcelView.as_view(), name='load_data'),
+    path('logout/', logout_view, name='logout'),
 ]
