@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load iam_tags static %}
 
 {% block content %}
 <!-- ======= Hero Section ======= -->
@@ -12,6 +12,7 @@
       </div>
     </div>
 
+    {% if user|has_perm:"inventory_management.view_product" %}
     <div class="row icon-boxes justify-content-evenly">
       <div class="col-md-6 col-lg-3 d-flex align-items-stretch mb-5 mb-lg-0" data-aos="zoom-in" data-aos-delay="200">
         <a href="{% url 'inventory_management:product_list' %}" class="d-flex align-items-stretch mb-5 mb-lg-0">
@@ -22,6 +23,9 @@
           </div>
         </a>
       </div>
+      {% endif %}
+
+      {% if user.is_authenticated %}
       <div class="col-md-6 col-lg-3 d-flex align-items-stretch mb-5 mb-lg-0" data-aos="zoom-in" data-aos-delay="200">
         <a href="{% url 'inventory_management:scan_qr' %}" class="d-flex align-items-stretch mb-5 mb-lg-0">
           <div class="icon-box square-icon-box">
@@ -30,7 +34,10 @@
             <p class="description">Veja detalhes de um produto escaneando seu QR Code.</p>
           </div>
         </a>
+      {% endif %}
+      
       </div>
+      {% if request.user.is_staff %}
       <div class="col-md-6 col-lg-3 d-flex align-items-stretch mb-5 mb-lg-0" data-aos="zoom-in" data-aos-delay="200">
         <a href="{% url 'admin:index' %}" class="d-flex align-items-stretch mb-5 mb-lg-0">
           <div class="icon-box square-icon-box">
@@ -40,6 +47,7 @@
           </div>
         </a>
       </div>
+      {% endif %}
     </div>
 
   </div>

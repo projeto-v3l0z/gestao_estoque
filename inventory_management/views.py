@@ -1,10 +1,8 @@
-from django.views.generic import TemplateView, ListView, DetailView, FormView
-from django.urls import reverse_lazy
+from django.views.generic import TemplateView, ListView, DetailView
 from django.http import JsonResponse
 from django.views import View
 from .models import *
 from django.shortcuts import redirect
-from datetime import date
 from .forms import QRCodeForm
 from django.http import HttpResponse
 import qrcode
@@ -13,62 +11,78 @@ from reportlab.lib.pagesizes import letter
 from django.shortcuts import render
 from io import BytesIO
 from django.utils import timezone
-from datetime import timedelta
-from django.db.models import Count, Sum
-from django.db.models import F, ExpressionWrapper, DecimalField
-import io
-import base64
+from django.db.models import Sum
+import re
 from decimal import Decimal
-from django.contrib.auth.models import User
 from django.db.models import Max, Sum
 from django.core.paginator import Paginator, PageNotAnInteger
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
-from django.db.models.functions import TruncMonth
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.pdfmetrics import registerFontFamily
 from reportlab.pdfbase.ttfonts import TTFont
 from .forms import UploadExcelForm
 import pandas as pd
 from django.contrib import messages
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from reportlab.lib.utils import simpleSplit
+from django.contrib.auth import logout
 
 
 
 class IndexView(TemplateView):
     template_name = 'index.html'
 
-
-class ProductListView(ListView):
+class ProductListView(PermissionRequiredMixin, ListView):
     model = Product
     template_name = 'product_list.html'
     context_object_name = 'products'
     paginate_by = 10
+    permission_required = 'inventory_management.view_product'
+
 
     def get_queryset(self):
         queryset = super().get_queryset()
         search = self.request.GET.get('search')
         if search:
-            queryset = queryset.filter(name__startswith=search)
+            queryset = queryset.filter(name__icontains=search)
         return queryset.order_by('name')
 
 
 
-class ProductDetailView(DetailView):
+class ProductDetailView(PermissionRequiredMixin, DetailView):
     model = Product
     template_name = 'product_detail.html'
+    permission_required = 'inventory_management.view_product'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         product = self.get_object()
         write_off = self.request.GET.get('write_off')
-        product_units = product.productunit_set.all()
+        location_id = self.request.GET.get('location')
+        building_id = self.request.GET.get('building')
+        room_id = self.request.GET.get('room')
+        hall_id = self.request.GET.get('hall')
+        shelf_id = self.request.GET.get('shelf')
         search = self.request.GET.get('search')
 
+        product_units = product.productunit_set.all()
+
         if search:
-            product_units = product_units.filter(id__contains=search)
+           product_units = product_units.filter(id__contains=search)
+
+        if location_id:
+            product_units = product_units.filter(location__id=location_id)
+        if building_id:
+            product_units = product_units.filter(building__id=building_id)
+        if room_id:
+            product_units = product_units.filter(room__id=room_id)
+        if hall_id:
+            product_units = product_units.filter(hall__id=hall_id)
+        if shelf_id:
+            product_units = product_units.filter(shelf__id=shelf_id)
 
         if write_off == 'baixados':
             product_units = product_units.filter(write_off=True)
@@ -89,15 +103,23 @@ class ProductDetailView(DetailView):
         context['product_units'] = product_units_page
         context['page_obj'] = product_units_page
 
+        # Passando os dados de filtro
+        context['locations'] = StorageType.objects.exclude(name__in=["Baixa"])
+        context['buildings'] = Building.objects.all()
+        context['rooms'] = Rooms.objects.all()
+        context['halls'] = Hall.objects.all()
+        context['shelves'] = Shelf.objects.all()
+
         return context
 
-class ProductUnitDetailView(DetailView):
+class ProductUnitDetailView(PermissionRequiredMixin, DetailView):
     model = ProductUnit
     template_name = 'product_unit_detail.html'
+    permission_required = 'inventory_management.view_productunit'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
+        context['storage_types'] = StorageType.objects.exclude(name__icontains=["Baixa", "Conferência"])
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
         context['halls'] = Hall.objects.all()
@@ -313,15 +335,17 @@ class AboutView(TemplateView):
     template_name = 'about.html'
 
 
-class AdressesView(ListView):
+class AdressesView(PermissionRequiredMixin, ListView):
     model = Building
     template_name = 'adresses.html'
     context_object_name = 'adresses'
+    permission_required = 'inventory_management.view_building'
 
 
-class AddressDetailView(DetailView):
+class AddressDetailView(PermissionRequiredMixin, DetailView):
     model = Building
     template_name = 'address.html'
+    permission_required = 'inventory_management.view_building'
 
 
 class GetProductLocationShelfView(View):
@@ -333,16 +357,31 @@ class GetProductLocationShelfView(View):
         except ProductUnit.DoesNotExist:
             return JsonResponse({}, status=404)
 
+def wrap_text(text, max_width, canvas, font_name, font_size):
+    canvas.setFont(font_name, font_size)
+    words = text.split()
+    lines = []
+    current_line = ""
+    for word in words:
+        test_line = f"{current_line} {word}".strip()
+        if canvas.stringWidth(test_line, font_name, font_size) <= max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    return lines
+
 def calculate_items_per_page(page_width, page_height, qr_size, columns):
     available_width = page_width - 100
     available_height = page_height - 100
 
     max_columns = columns
-    max_rows = available_height // (qr_size + 20)
+    max_rows = available_height // (qr_size + 40)  # Ajuste para acomodar o texto extra
     items_per_page = max_rows * max_columns
 
     return items_per_page
-
 
 def generate_qr_codes(request):
     host = request.get_host()
@@ -376,6 +415,7 @@ def generate_qr_codes(request):
                 c = canvas.Canvas(buffer, pagesize=letter)
 
                 x_offset = 50
+                top_margin = 200
                 qr_size = get_qr_size(size_preset)
                 page_width, page_height = letter
                 if size_preset == 'pequeno':
@@ -384,47 +424,47 @@ def generate_qr_codes(request):
                     columns = 3
                 elif size_preset == 'grande':
                     columns = 2
+                    top_margin = 300
 
                 items_per_page = calculate_items_per_page(page_width, page_height, qr_size, columns)
 
                 pdfmetrics.registerFont(TTFont('VeraBd', 'VeraBd.ttf'))
+                
+
+              
 
                 for idx, (qr, item) in enumerate(qr_codes):
                     row = idx // columns
                     col = idx % columns
-                    page_idx = idx // items_per_page
-
-                    if size_preset == 'pequeno':
-                        y_coordinate = page_height - 200 - (row % (items_per_page // columns)) * (qr_size + 25)
-                        x_coordinate = 27 + x_offset + col * (qr_size + 20)
-                        text_x_coordinate = x_coordinate - 10
-                        text_y_coordinate = y_coordinate + qr_size + 2
-                        text_x_coordinate2 = x_coordinate + 37.5
-                        text_y_coordinate2 = y_coordinate - qr_size + 95
-                        c.setFont("VeraBd", 7 )
-                    elif size_preset == 'medio':
-                        y_coordinate = page_height - 200 - (row % (items_per_page // columns)) * (qr_size + 25)
-                        x_coordinate = 13 + x_offset + col * (qr_size + 20)
-                        text_x_coordinate = x_coordinate
-                        text_y_coordinate = y_coordinate + qr_size + 2
-                        text_x_coordinate2 = x_coordinate + 58.5
-                        text_y_coordinate2 = y_coordinate - qr_size + 150
-                        c.setFont("VeraBd", 8.5 )
-                    elif size_preset == 'grande':
-                        y_coordinate = page_height - 250 - (row % (items_per_page // columns)) * (qr_size + 25)
-                        x_coordinate = 50 + x_offset + col * (qr_size + 20)
-                        text_x_coordinate = x_coordinate - 5
-                        text_y_coordinate = y_coordinate + qr_size + 2
-                        text_x_coordinate2 = x_coordinate + 79.5
-                        text_y_coordinate2 = y_coordinate - qr_size + 200
-                        c.setFont("VeraBd", 11 )
 
                     if idx > 0 and idx % items_per_page == 0:
                         c.showPage()
 
-                    c.drawString(text_x_coordinate, text_y_coordinate, item.product.name.upper())
+                    # Ajustar a posição inicial do QR Code e do texto com base na margem superior
+                    y_coordinate = page_height - top_margin - (row % (items_per_page // columns)) * (qr_size + 80)
+                    x_coordinate = 50 + x_offset + col * (qr_size + 20)
+
+                    # Nome do produto (acima do QR Code)
+                    product_name = item.product.name.upper()
+                    max_width = qr_size
+                    wrapped_text = wrap_text(product_name, max_width, c, "VeraBd", 9)  # Função para quebrar o texto
+                    total_text_height = len(wrapped_text) * 11 
+                    text_start_y = y_coordinate + qr_size + total_text_height + 1  # Começar pelo topo do texto
+
+                    for line in wrapped_text:
+                        text_width = c.stringWidth(line, "VeraBd", 9)
+                        line_x = x_coordinate + (qr_size - text_width) / 2
+                        text_start_y -= 10  # Subtrair o espaçamento por linha
+                        c.drawString(line_x, text_start_y, line)
+
+                    # Desenhar o QR Code
                     c.drawInlineImage(qr, x_coordinate, y_coordinate, width=qr_size, height=qr_size)
-                    c.drawString(text_x_coordinate2, text_y_coordinate2, item.code)
+
+                    # Código do produto (abaixo do QR Code)
+                    product_code = item.code
+                    text_width = c.stringWidth(product_code, "VeraBd", 9)
+                    code_x = x_coordinate + (qr_size - text_width) / 2
+                    c.drawString(code_x, y_coordinate - 15, product_code)
 
                 c.showPage()
                 c.save()
@@ -447,9 +487,10 @@ def get_qr_size(size_preset):
 
 
 @method_decorator(login_required, name='dispatch')
-class WorkSpaceView(ListView):
+class WorkSpaceView(PermissionRequiredMixin ,ListView):
     template_name = 'workspace.html'
     model = WorkSpace
+    permission_required = 'inventory_management.view_workspace'
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -457,6 +498,8 @@ class WorkSpaceView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['can_transfer'] = self.request.user.has_perm('inventory_management.add_stocktransfer')
+        context['can_write_off'] = self.request.user.has_perm('inventory_management.add_write_off')
         context['write_off_destinations'] = WriteOffDestinations.objects.all()
         context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
         context['shelves'] = Shelf.objects.all()
@@ -586,12 +629,11 @@ class WorkSpaceView(ListView):
         return JsonResponse({'error': 'Ação inválida'}, status=400)
 
 
-
-
 def delete_workspace(request, code):
     code = code.upper()
     WorkSpace.objects.filter(user=request.user, product__code=code).delete()
     return HttpResponseRedirect(reverse('inventory_management:workspace'))
+
 
 def get_building_properties(request):
     building_id = request.GET.get('building_id')
@@ -646,12 +688,25 @@ def get_storage_type_is_store(request):
             return JsonResponse({'error': 'StorageType not found'}, status=404)
     return JsonResponse({'error': 'No ID provided'}, status=400)
 
+def check_admin(user):
+    return user.is_superuser
 
+@method_decorator(user_passes_test(check_admin), name='dispatch')
 class DashboardView(TemplateView):
     template_name = 'admin/dashboard.html'
-
+    
+@method_decorator(user_passes_test(check_admin), name='dispatch')
 class UploadExcelView(View):
     template_name = 'upload_excel.html'
+
+    MEASURE_MAPPING = {
+        'KG': 'kg',
+        'MT': 'm',
+        'CM': 'cm',
+        'G': 'g',
+        'UND': 'u',
+        'UN': 'u'
+    }
 
     def get(self, request):
         form = UploadExcelForm()
@@ -663,73 +718,148 @@ class UploadExcelView(View):
         if form.is_valid():
             arquivo = request.FILES['file']
             try:
-                df = pd.read_excel(arquivo, sheet_name='LOCALIZAÇÕES')
-                print("Nomes das colunas do DataFrame:", df.columns)
+                df = pd.read_excel(arquivo, sheet_name=None)
+                sheets = df.keys()
 
-                df.columns = ['deposito', 'corredor', 'sala', 'gaveta']
+                products_added, products_updated = self.process_products(df.get('PRODUTOS'))
 
-                adicionados = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
-                atualizados = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
+                locations_added, locations_updated = self.process_locations(df.get('LOCALIZAÇÕES'))
 
-                for _, row in df.iterrows():
-                    adicionados, atualizados = self.processar_linha(row, adicionados, atualizados)
-
-                messages.success(request, (
-                    f"Dados processados com sucesso: "
-                    f"{adicionados['building']} prédios adicionados, {atualizados['building']} atualizados; "
-                    f"{adicionados['hall']} corredores adicionados, {atualizados['hall']} atualizados; "
-                    f"{adicionados['room']} salas adicionadas, {atualizados['room']} atualizadas; "
-                    f"{adicionados['shelf']} gavetas adicionadas, {atualizados['shelf']} atualizadas."
-                ))
+                self.show_success_message(products_added, products_updated, locations_added, locations_updated)
             except Exception as e:
-                messages.error(request, f"Ocorreu um erro ao processar o arquivo: {e}")
+                self.show_error_message(request, f'Erro ao processar arquivo: {e}')
+                return redirect('inventory_management:load_data')
 
             return redirect('inventory_management:load_data')
 
-        messages.error(request, "Ocorreu um erro no upload do arquivo. Verifique o formato e tente novamente.")
+        self.show_error_message(request, 'Ocorreu um erro com o upload do arquivo. Por favor, verifique o formato e tente novamente.')
         return render(request, self.template_name, {'form': form})
 
-    def processar_linha(self, row, adicionados, atualizados):
+    def process_products(self, products_df):
+        added = 0
+        updated = 0
+
+        if products_df is not None:
+            products_df.columns = ['nome', 'preco', 'ncm', 'unidade']
+            for _, row in products_df.iterrows():
+                created = self.create_or_update_product(row)
+                if created:
+                    added += 1
+                else:
+                    updated += 1
+
+        return added, updated
+
+    def create_or_update_product(self, row):
+        mapped_unit = self.MEASURE_MAPPING.get(row['unit'].upper(), 'u')
+        name_lower = row['name'].strip().lower()
+        product, created = Product.objects.update_or_create(
+            name=name_lower,
+            defaults={
+                'ncm': row['ncm'],
+                'price': row['preco'],
+                'measure': mapped_unit,
+                'updated_by': self.request.user,
+                'updated_at': timezone.now()
+            }
+        )
+        if created:
+            product.created_by = self.request.user
+            product.created_at = timezone.now()
+        else:
+            product.updated_by = self.request.user
+            product.updated_at = timezone.now()
+        product.save()
+        return created
+
+    def process_locations(self, locations_df):
+        added = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
+        updated = {"building": 0, "hall": 0, "room": 0, "shelf": 0}
+
+        if locations_df is not None:
+            locations_df.columns = ['depositos', 'corredores', 'salas', 'gavetas']
+            for _, row in locations_df.iterrows():
+                added, updated = self.create_or_update_location(row, added, updated)
+
+        return added, updated
+
+    def create_or_update_location(self, row, added, updated):
+
         building, created = Building.objects.update_or_create(
-            name=row['deposito'],
+            name=row['depositos'],
             defaults={'updated_at': timezone.now()}
         )
-        if created:
-            adicionados['building'] += 1
-        else:
-            atualizados['building'] += 1
+        added, updated = self.update_counts(added, updated, 'building', created)
 
-        hall, created = Hall.objects.update_or_create(
-            name=row['corredor'],
-            building=building,
-            defaults={'updated_at': timezone.now()}
+        hall_name = row['corredores'].strip().upper()
+        if hall_name != "SEM":
+            hall, created = Hall.objects.update_or_create(
+                name=row['corredores'],
+                building=building,
+                defaults={'updated_at': timezone.now()}
+            )
+            added, updated = self.update_counts(added, updated, 'hall', created)
+        else:
+            hall = None
+
+        room_name = row['salas'].strip().upper()
+        if room_name != "SEM":
+            room, created = Rooms.objects.update_or_create(
+                name=row['salas'],
+                hall=hall,
+                building=building,
+                defaults={'updated_at': timezone.now()}
+            )
+            added, updated = self.update_counts(added, updated, 'room', created)
+        else:
+            room = None
+
+        shelves = self.process_shelf_range(row['gavetas'], room, hall, building)
+        for shelf in shelves:
+            shelf_obj, created = Shelf.objects.update_or_create(
+                name=str(shelf),
+                room=room,
+                hall=hall,
+                building=building,
+                defaults={'updated_at': timezone.now()}
+            )
+            added, updated = self.update_counts(added, updated, 'shelf', created)
+
+        return added, updated
+
+    def process_shelf_range(self, shelf_range, room, hall, building):
+        shelves = []
+        match = re.match(r"DE (\d+) A (\d+)", shelf_range.strip())
+        if match:
+            start = int(match.group(1))
+            end = int(match.group(2))
+            shelves.extend(range(start, end + 1))
+        elif shelf_range.strip().upper() == "SEM":
+            return shelves
+        return shelves
+
+    def update_counts(self, added, updated, entity, created):
+        if created:
+            added[entity] += 1
+        else:
+            updated[entity] += 1
+        return added, updated
+
+    def show_success_message(self, products_added, products_updated, locations_added, locations_updated):
+        message = (
+            f'{products_added} produtos adicionados, {products_updated} produtos atualizados. '
+            f'Dados de Localização: '
+            f'{locations_added["building"]} Depósitos adicionados, {locations_updated["building"]} atualizados; '
+            f'{locations_added["hall"]} Corredores adicionados, {locations_updated["hall"]} atualizados; '
+            f'{locations_added["room"]} Salas adicionadas, {locations_updated["room"]} atualizados; '
+            f'{locations_added["shelf"]} Gavetas adicionadas, {locations_updated["shelf"]} atualizados.'
         )
-        if created:
-            adicionados['hall'] += 1
-        else:
-            atualizados['hall'] += 1
+        messages.success(self.request, message)
 
-        room, created = Rooms.objects.update_or_create(
-            name=row['sala'],
-            hall=hall,
-            building=building,
-            defaults={'updated_at': timezone.now()}
-        )
-        if created:
-            adicionados['room'] += 1
-        else:
-            atualizados['room'] += 1
-
-        shelf, created = Shelf.objects.update_or_create(
-            name=row['gaveta'],
-            room=room,
-            hall=hall,
-            building=building,
-            defaults={'updated_at': timezone.now()}
-        )
-        if created:
-            adicionados['shelf'] += 1
-        else:
-            atualizados['shelf'] += 1
-
-        return adicionados, atualizados
+    def show_error_message(self, request, message):
+        messages.error(request, message)
+        
+        
+def logout_view(request):
+    logout(request)
+    return redirect('admin:login')

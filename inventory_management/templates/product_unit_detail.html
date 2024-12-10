@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% load iam_tags static %}
 {% block content %}
 {% if user.is_authenticated %}
 <div class="container pt-5">
@@ -124,11 +124,13 @@
     
     {% if object.write_off %}
     <div class="column d-flex flex-column justify-content-center align-items-center mt-4">
+        {% if user|has_perm:"inventory_management.add_write_off" %}
         <div class="col-12 col-md-3 d-flex mt-3 justify-content-center">    
             <button type="button" class="btn btn-success flex-fill w-100" data-toggle="modal" data-target="#backToStockModal">
                 <i class="bi bi-box-arrow-up"></i> Voltar para estoque
             </button>
         </div>
+        {% endif %}
     </div>
     <div class="modal fade" id="backToStockModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -206,11 +208,12 @@
     
     {% else %}
         <div class="column d-flex flex-column justify-content-center align-items-center mt-4">
+            {% if user|has_perm:"inventory_management.add_write_off"%}
             <div class="col-12 col-md-3 d-flex mt-3 justify-content-center">    
                 <button type="button" class="btn btn-warning flex-fill w-100" data-toggle="modal" data-target="#confirmationModal">
                     <i class="bi bi-archive"></i> Dar baixa
                 </button>
-        
+
                 <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
                     <div class="modal-dialog" role="document">
                       <div class="modal-content">
@@ -245,11 +248,14 @@
                     </div>
                 </div>  
             </div>
+            {% endif %}    
+            {% if user|has_perm:"inventory_management.add_stocktransfer" %}
             <div class="col-12 col-md-3 d-flex mt-3 justify-content-center">
                 <button class="btn btn-primary flex-fill" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasExample" aria-controls="offcanvasExample">
                     <i class="bi bi-arrow-right"></i> Realizar transferência
                 </button>
-            </div>            
+            </div>
+            {% endif %}           
         </div>
         <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasExample" aria-labelledby="offcanvasExampleLabel">
             <div class="offcanvas-header">
@@ -330,18 +336,24 @@
                 <div class="col-md-12 fs-5">
                     {{ object.product.description|linebreaks }}
                 </div>
+                {% if object.product.width %}
                 <div class="col-md-12">
                     <h2>Largura</h2>
                     <p>{{ object.product.width }}m</p>
                 </div>
+                {% endif %}
+                {% if object.product.composition %}
                 <div class="col-md-12">
                     <h2>Composição</h2>
                     <p>{{ object.product.composition }}</p>
                 </div>
+                {% endif %}
+                {% if object.product.incoming %}
                 <div class="col-md-12">
                     <h2>Rendimento:</h2>
                     <p>{{ object.incoming }}</p>
                 </div>
+                {% endif %}
                 <div class="col-md-12">
                     <h3>Unidade de medida: {{ object.product.get_measure }}</h3>
                 </div>
