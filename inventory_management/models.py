@@ -102,6 +102,9 @@ class Product(models.Model):
         verbose_name_plural = "Produtos"
         verbose_name = "Produto"
         ordering = ['name']
+        permissions = [
+            ("can_view_admin", "Can view admin"),
+        ]
     
     def get_absolute_url(self):
         return reverse('inventory_management:product_detail', kwargs={'slug': self.slug})
@@ -335,6 +338,10 @@ class Write_off(models.Model):
     class Meta:
         verbose_name_plural = "Baixas"
         verbose_name = "Baixa"
+        permissions = [
+            ("can_write_off", "Can write off"),
+            ("can_recomission", "Can recomission")
+        ]
 
 
 class Building(models.Model):

@@ -124,7 +124,7 @@
     
     {% if object.write_off %}
     <div class="column d-flex flex-column justify-content-center align-items-center mt-4">
-        {% if user|has_perm:"inventory_management.add_write_off" %}
+        {% if user|has_perm:"inventory_management.add_write_off" and user|has_perm:"inventory_management.can_recomission" %}
         <div class="col-12 col-md-3 d-flex mt-3 justify-content-center">    
             <button type="button" class="btn btn-success flex-fill w-100" data-toggle="modal" data-target="#backToStockModal">
                 <i class="bi bi-box-arrow-up"></i> Voltar para estoque
@@ -210,43 +210,45 @@
         <div class="column d-flex flex-column justify-content-center align-items-center mt-4">
             {% if user|has_perm:"inventory_management.add_write_off"%}
             <div class="col-12 col-md-3 d-flex mt-3 justify-content-center">    
+                {% if user|has_perm:"inventory_management.can_write_off"%}
                 <button type="button" class="btn btn-warning flex-fill w-100" data-toggle="modal" data-target="#confirmationModal">
                     <i class="bi bi-archive"></i> Dar baixa
                 </button>
-
+                
                 <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
                     <div class="modal-dialog" role="document">
-                      <div class="modal-content">
-                        <div class="modal-header">
-                          <h5 class="modal-title" id="exampleModalLabel">Confirmação de Baixa</h5>
-                          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                          </button>
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="exampleModalLabel">Confirmação de Baixa</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                Tem certeza de que deseja dar baixa neste item?
+                                <br>
+                                <div class="form-group">
+                                    <label for="write_off_destination" class="form-label">Destinatário da Baixa:</label>
+                                    <form id="write_off_form" method="post" action="">
+                                        {% csrf_token %}
+                                        <select name="write_off_destination" id="write_off_destination" class="form-select">
+                                            {% for write_off_destination in write_off_destinations %}
+                                            <option value="{{ write_off_destination.id }}">{{ write_off_destination }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <input type="hidden" name="write_off" value="True">
+                                        
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-danger">Confirmar Baixa</button>
+                                </form>
+                            </div>
                         </div>
-                        <div class="modal-body">
-                          Tem certeza de que deseja dar baixa neste item?
-                          <br>
-                          <div class="form-group">
-                            <label for="write_off_destination" class="form-label">Destinatário da Baixa:</label>
-                            <form id="write_off_form" method="post" action="">
-                                {% csrf_token %}
-                                <select name="write_off_destination" id="write_off_destination" class="form-select">
-                                  {% for write_off_destination in write_off_destinations %}
-                                  <option value="{{ write_off_destination.id }}">{{ write_off_destination }}</option>
-                                  {% endfor %}
-                                </select>
-                                <input type="hidden" name="write_off" value="True">
-                           
-                        </div>
-                        </div>
-                        <div class="modal-footer">
-                          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                          <button type="submit" class="btn btn-danger">Confirmar Baixa</button>
-                            </form>
-                        </div>
-                      </div>
                     </div>
                 </div>  
+                {% endif %}
             </div>
             {% endif %}    
             {% if user|has_perm:"inventory_management.add_stocktransfer" %}

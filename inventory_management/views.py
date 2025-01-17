@@ -71,7 +71,7 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
         product_units = product.productunit_set.all()
 
         if search:
-           product_units = product_units.filter(id__contains=search)
+           product_units = product_units.filter(code__contains=search)
 
         if location_id:
             product_units = product_units.filter(location__id=location_id)
@@ -112,10 +112,10 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
 
         return context
 
-class ProductUnitDetailView(PermissionRequiredMixin, DetailView):
+class ProductUnitDetailView(DetailView):
     model = ProductUnit
     template_name = 'product_unit_detail.html'
-    permission_required = 'inventory_management.view_productunit'
+    # permission_required = 'inventory_management.view_productunit'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
