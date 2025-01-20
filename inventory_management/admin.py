@@ -140,9 +140,12 @@ class ProductUnitAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
         if obj:
-            form.base_fields['quantity'].widget = forms.HiddenInput()
-            form.base_fields['weight_length'].disabled = True
-            form.base_fields['incoming'].disabled = True
+            if 'quantity' in form.base_fields:
+                form.base_fields['quantity'].widget = forms.HiddenInput()
+            if 'weight_length' in form.base_fields:
+                form.base_fields['weight_length'].disabled = True
+            if 'incoming' in form.base_fields:
+                form.base_fields['incoming'].disabled = True
         return form
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):

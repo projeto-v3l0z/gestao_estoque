@@ -5,7 +5,7 @@ JAZZMIN_SETTINGS = {
     "hide_models": ["inventory_management.room"],
     "changeform_format": "single",
     "topmenu_links": [
-        {"name": "Home",  "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Home",  "url": "admin:index",},
         {"name": "Produtos", "url": "admin:inventory_management_product_changelist", "permissions": ["inventory_management.view_product"]},
         {"name": "Unidades de Produto", "url": "admin:inventory_management_productunit_changelist", "permissions": ["inventory_management.view_productunit"]},
         {"name": "Transferências", "url": "admin:inventory_management_stockTransfer_changelist", "permissions": ["inventory_management.view_stockTransfer"]},
@@ -13,7 +13,7 @@ JAZZMIN_SETTINGS = {
         {"name": "Voltar para o site", "url": "/"},
     ],
 
-
+    
     "order_with_respect_to": [
         "inventory_management",
         "inventory_management.product",
