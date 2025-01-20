@@ -156,7 +156,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_REDIRECT_URL = 'admin:index'
+LOGIN_REDIRECT_URL = 'inventory_management:index'
 LOGOUT_REDIRECT_URL = '/'
 
 JAZZMIN_SETTINGS = JAZZMIN_SETTINGS
