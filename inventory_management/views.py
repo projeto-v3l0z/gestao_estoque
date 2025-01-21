@@ -47,7 +47,7 @@ class ProductListView(PermissionRequiredMixin, ListView):
         queryset = super().get_queryset()
         search = self.request.GET.get('search')
         if search:
-            queryset = queryset.filter(name__icontains=search)
+            queryset = queryset.filter(name__icontains=search.lower())
         return queryset.order_by('name')
 
 
@@ -71,7 +71,7 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
         product_units = product.productunit_set.all()
 
         if search:
-           product_units = product_units.filter(code__contains=search)
+           product_units = product_units.filter(code__contains=search.lower())
 
         if location_id:
             product_units = product_units.filter(location__id=location_id)
