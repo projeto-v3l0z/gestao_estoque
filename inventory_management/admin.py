@@ -87,7 +87,7 @@ class StockTransferInline(admin.TabularInline):
 class ProductUnitAdmin(admin.ModelAdmin):
     list_display = ('id','product', 'code' ,'location','shelf_or_none','weight_length_with_measure', 'write_off' , 'was_written_off' ,'qr_code_generated','purchase_date', "created_by", "created_at", "updated_by", "updated_at")
     search_fields = ('product__name', 'location__name', 'id', 'code')
-    list_filter = ('product' ,'purchase_date', 'location','building', 'hall', 'room','shelf', 'write_off', 'was_written_off' ,'qr_code_generated')
+    list_filter = ('purchase_date', 'location','building', 'hall', 'room','shelf', 'write_off', 'was_written_off' ,'qr_code_generated')
     fields = ['product', 'quantity', 'weight_length', 'incoming',]
     actions = [download_qr_codes, write_off_products, write_on_products]
     inlines = [ClothConsumptionInline, StockTransferInline]
