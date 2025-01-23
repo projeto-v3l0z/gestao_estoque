@@ -67,7 +67,6 @@ class Product(models.Model):
     width = models.DecimalField("Largura", max_digits=10, decimal_places=2, null=True, blank=True)
     composition = models.CharField("Composição", max_length=100, null=True, blank=True)
     image = models.ImageField("Imagem", upload_to='product_images', blank=True, null=True)
-    code = models.CharField("Código", max_length=255, null=True, blank=True)
     ncm = models.CharField("NCM", max_length=8, null=True, blank=True)
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
     color = models.ForeignKey('inventory_management.Color', on_delete=models.CASCADE, verbose_name="Cor", blank=True, null=True, editable=False)
