@@ -1,0 +1,29 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Formulário de Login{% endblock %}
+
+{% block content %}
+
+<header>Entre no sistema</header>
+<p class="welcome-message">Bem-vindo! Por favor, entre com suas credenciais.</p>
+
+<form action="{% url 'account_login' %}" method="POST" class="form">
+
+  {% csrf_token %}
+  <div class="input-box">
+    <label for="{{ form.username.id_for_label }}">Nome de Usuário</label>
+    {{ form.username }}
+  </div>
+  <div class="input-box">
+    <label for="{{ form.password.id_for_label }}">Senha</label>
+    {{ form.password }}
+  </div>
+  <br>
+  {% if error_message %}
+    <div class="text-red-600 text-sm mb-4">
+        {{ error_message }}
+    </div>
+  {% endif %}
+  <button type="submit" value="logar">Entrar</button>
+</form>
+{% endblock %}
