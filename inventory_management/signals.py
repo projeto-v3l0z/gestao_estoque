@@ -40,7 +40,6 @@ def update_or_create_related_products(sender, instance, created, **kwargs):
         "width": instance.width,
         "composition": instance.composition,
         "image": instance.image,
-        "code": instance.code,
         "ncm": instance.ncm,
         "created_by": instance.created_by,
         "updated_by": instance.updated_by,
