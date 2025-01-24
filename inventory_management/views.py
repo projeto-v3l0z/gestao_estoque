@@ -17,6 +17,7 @@ from decimal import Decimal
 from django.db.models import Max, Sum
 from django.core.paginator import Paginator, PageNotAnInteger
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -32,7 +33,7 @@ from django.contrib.auth import logout
 
 
 
-class IndexView(TemplateView):
+class IndexView(LoginRequiredMixin, TemplateView):
     template_name = 'index.html'
 
 class ProductListView(PermissionRequiredMixin, ListView):
