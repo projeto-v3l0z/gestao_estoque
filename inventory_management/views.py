@@ -17,6 +17,7 @@ from decimal import Decimal
 from django.db.models import Max, Sum
 from django.core.paginator import Paginator, PageNotAnInteger
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -32,7 +33,7 @@ from django.contrib.auth import logout
 
 
 
-class IndexView(TemplateView):
+class IndexView(LoginRequiredMixin, TemplateView):
     template_name = 'index.html'
 
 class ProductListView(PermissionRequiredMixin, ListView):
@@ -47,7 +48,7 @@ class ProductListView(PermissionRequiredMixin, ListView):
         queryset = super().get_queryset()
         search = self.request.GET.get('search')
         if search:
-            queryset = queryset.filter(name__icontains=search)
+            queryset = queryset.filter(name__icontains=search.lower())
         return queryset.order_by('name')
 
 
@@ -71,7 +72,7 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
         product_units = product.productunit_set.all()
 
         if search:
-           product_units = product_units.filter(id__contains=search)
+           product_units = product_units.filter(code__contains=search.lower())
 
         if location_id:
             product_units = product_units.filter(location__id=location_id)
@@ -112,10 +113,10 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
 
         return context
 
-class ProductUnitDetailView(PermissionRequiredMixin, DetailView):
+class ProductUnitDetailView(DetailView):
     model = ProductUnit
     template_name = 'product_unit_detail.html'
-    permission_required = 'inventory_management.view_productunit'
+    # permission_required = 'inventory_management.view_productunit'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

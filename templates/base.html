@@ -82,7 +82,7 @@
                 {% if user|has_perm:"inventory_management.view_workspace" and user.is_authenticated %}
                     <li><a class="nav-link" href="{% url 'inventory_management:workspace' %}">Área de Trabalho</a></li>
                 {% endif %}
-                {% if user.is_staff %}
+                {% if user.is_staff and user|has_perm:"inventory_management.can_view_admin" %}
                     <li><a class="nav-link" href="{% url 'admin:index' %}">Administração</a></li>
                 {% endif %}
                 {% if not user.is_authenticated %}
@@ -148,42 +148,53 @@
 
 {% block extra_head %}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    function disableButtons() {
-        const buttons = document.querySelectorAll('button');
-        buttons.forEach(function(button) {
-            button.disabled = true;
-        });
-    }
-
-    function enableButtons() {
-        const buttons = document.querySelectorAll('button');
-        buttons.forEach(function(button) {
-            button.disabled = false;
-        });
-    }
-
-    // Desabilitar botões ao enviar o formulário
-    document.querySelectorAll('form').forEach(function(form) {
-        form.addEventListener('submit', function() {
-            disableButtons();
-        });
-    });
-
-    // Desabilitar botões durante requisições AJAX
-    document.addEventListener('ajaxStart', function() {
-        disableButtons();
-    });
-
-    document.addEventListener('ajaxStop', function() {
-        enableButtons();
-    });
-
-    // Para lidar com navegação de página (recarregamento)
-    window.addEventListener('beforeunload', function () {
-        disableButtons();
-    });
-});
+    document.addEventListener('DOMContentLoaded', function () {
+      // Função para desabilitar os botões
+      function disableButtons() {
+          const buttons = document.querySelectorAll('button');
+          buttons.forEach(function(button) {
+              button.disabled = true;
+          });
+      }
+  
+      // Função para habilitar os botões
+      function enableButtons() {
+          const buttons = document.querySelectorAll('button');
+          buttons.forEach(function(button) {
+              button.disabled = false;
+          });
+      }
+  
+      // Limpar o estado de desabilitação ao recarregar ou voltar na navegação
+      window.addEventListener('pageshow', function(event) {
+          // Verifica se a navegação foi feita via cache (navegação 'voltar')
+          if (event.persisted) {
+              enableButtons();  // Garante que os botões serão habilitados
+          }
+      });
+  
+      // Desabilitar botões ao enviar o formulário
+      document.querySelectorAll('form').forEach(function(form) {
+          form.addEventListener('submit', function() {
+              disableButtons();
+          });
+      });
+  
+      // Desabilitar botões durante requisições AJAX
+      document.addEventListener('ajaxStart', function() {
+          disableButtons();
+      });
+  
+      document.addEventListener('ajaxStop', function() {
+          enableButtons();
+      });
+  
+      // Para lidar com navegação de página (recarregamento)
+      window.addEventListener('beforeunload', function () {
+          disableButtons();
+      });
+  });
+  
 </script>
 {% endblock %}
 

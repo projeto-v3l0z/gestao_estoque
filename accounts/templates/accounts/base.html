@@ -1,0 +1,24 @@
+{% load static %}
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>{% block title %}Título Padrão{% endblock %}</title>
+
+    <link href="{% static 'OnePage/assets/img/favicon.png' %}" rel="icon">
+    <link href="{% static 'OnePage/assets/img/apple-touch-icon.png' %}" rel="apple-touch-icon">
+
+    <link rel="stylesheet" href="{% static 'accounts/css/style-registro.css' %}" />
+</head>
+<body>
+    <section class="container">
+
+      {% block content %}
+      {% endblock %}
+
+    </section>
+</body>
+</html>

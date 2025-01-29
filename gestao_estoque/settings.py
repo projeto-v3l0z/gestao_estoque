@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'accounts.apps.AccountsConfig',
     'inventory_management.apps.InventoryManagementConfig',
 ]
 
@@ -81,6 +82,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'gestao_estoque.wsgi.application'
 
+AUTH_USER_MODEL = "accounts.User"
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -156,7 +158,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_REDIRECT_URL = 'admin:index'
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = 'inventory_management:index'
 LOGOUT_REDIRECT_URL = '/'
 
 JAZZMIN_SETTINGS = JAZZMIN_SETTINGS
