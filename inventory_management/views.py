@@ -1,9 +1,9 @@
-from django.views.generic import TemplateView, ListView, DetailView
+from django.views.generic import TemplateView, ListView, DetailView, CreateView
 from django.http import JsonResponse
 from django.views import View
 from .models import *
 from django.shortcuts import redirect
-from .forms import QRCodeForm
+from .forms import ProductUnitForm, QRCodeForm
 from django.http import HttpResponse
 import qrcode
 from reportlab.pdfgen import canvas
@@ -50,7 +50,6 @@ class ProductListView(PermissionRequiredMixin, ListView):
         if search:
             queryset = queryset.filter(name__icontains=search.lower())
         return queryset.order_by('name')
-
 
 
 class ProductDetailView(PermissionRequiredMixin, DetailView):
@@ -328,6 +327,13 @@ class ProductUnitDetailView(DetailView):
         return redirect(product_unit.get_absolute_url())
 
 
+class ProductUnitCreateView(PermissionRequiredMixin, CreateView):
+    model = ProductUnit
+    template_name = 'product_unit/form.html'   
+    form_class = ProductUnitForm
+    permission_required = 'inventory_management.add_productunit'
+    
+
 class ScanQRView(TemplateView):
     template_name = 'scan_qr.html'
 
@@ -358,6 +364,7 @@ class GetProductLocationShelfView(View):
         except ProductUnit.DoesNotExist:
             return JsonResponse({}, status=404)
 
+
 def wrap_text(text, max_width, canvas, font_name, font_size):
     canvas.setFont(font_name, font_size)
     words = text.split()
@@ -374,6 +381,7 @@ def wrap_text(text, max_width, canvas, font_name, font_size):
         lines.append(current_line)
     return lines
 
+
 def calculate_items_per_page(page_width, page_height, qr_size, columns):
     available_width = page_width - 100
     available_height = page_height - 100
@@ -383,6 +391,7 @@ def calculate_items_per_page(page_width, page_height, qr_size, columns):
     items_per_page = max_rows * max_columns
 
     return items_per_page
+
 
 def generate_qr_codes(request):
     host = request.get_host()
@@ -477,6 +486,7 @@ def generate_qr_codes(request):
     else:
         form = QRCodeForm()
     return render(request, 'admin/inventory_management/productunit/generate_qr_codes.html', {'form': form})
+
 
 def get_qr_size(size_preset):
     if size_preset == 'pequeno':
@@ -646,11 +656,13 @@ def get_building_properties(request):
     }
     return JsonResponse(properties)
 
+
 def get_halls(request):
     building_id = request.GET.get('building_id')
     halls = Hall.objects.filter(building_id=building_id)
     data = [{'id': hall.id, 'name': hall.name} for hall in halls]
     return JsonResponse(data, safe=False)
+
 
 def get_rooms(request):
     building_id = request.GET.get('building_id')
@@ -661,6 +673,7 @@ def get_rooms(request):
         rooms = Rooms.objects.filter(building_id=building_id, hall__isnull=True)
     data = [{'id': room.id, 'name': room.name} for room in rooms]
     return JsonResponse(data, safe=False)
+
 
 def get_shelves(request):
     building_id = request.GET.get('building_id')
@@ -675,9 +688,11 @@ def get_shelves(request):
     data = [{'id': shelf.id, 'name': shelf.name} for shelf in shelves]
     return JsonResponse(data, safe=False)
 
+
 def get_write_off_status(request, product_unit_id):
     product_unit = get_object_or_404(ProductUnit, id=product_unit_id)
     return JsonResponse({'write_off': product_unit.write_off})
+
 
 def get_storage_type_is_store(request):
     storage_type_id = request.GET.get('id')
@@ -689,12 +704,15 @@ def get_storage_type_is_store(request):
             return JsonResponse({'error': 'StorageType not found'}, status=404)
     return JsonResponse({'error': 'No ID provided'}, status=400)
 
+
 def check_admin(user):
     return user.is_superuser
+
 
 @method_decorator(user_passes_test(check_admin), name='dispatch')
 class DashboardView(TemplateView):
     template_name = 'admin/dashboard.html'
+
     
 @method_decorator(user_passes_test(check_admin), name='dispatch')
 class UploadExcelView(View):

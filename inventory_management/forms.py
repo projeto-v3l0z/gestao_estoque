@@ -1,6 +1,6 @@
 # forms.py
 from django import forms
-from .models import Product, Building
+from .models import Product, Building, ProductUnit
 
 class QRCodeForm(forms.Form):
     SIZE_PRESETS = [
@@ -25,3 +25,24 @@ class UploadExcelForm(forms.Form):
             if not file.name.endswith('.xlsx'):
                 raise forms.ValidationError('O arquivo deve ser um arquivo Excel (.xlsx)')
         return cleaned_data
+    
+    
+
+class ProductUnitForm(forms.ModelForm):
+    class Meta:
+        model = ProductUnit
+        exclude = ['qr_code_generated', 'was_written_off', 'write_off', ]
+        widgets = {
+            'code': forms.TextInput(attrs={'class': 'form-control'}),
+            'product': forms.Select(attrs={'class': 'form-control'}),
+            'provider': forms.TextInput(attrs={'class': 'form-control'}),
+            'location': forms.Select(attrs={'class': 'form-control'}),
+            'building': forms.Select(attrs={'class': 'form-control'}),
+            'room': forms.Select(attrs={'class': 'form-control'}),
+            'hall': forms.Select(attrs={'class': 'form-control'}),
+            'shelf': forms.Select(attrs={'class': 'form-control'}),
+            'purchase_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'weight_length': forms.NumberInput(attrs={'class': 'form-control'}),
+            'incoming': forms.NumberInput(attrs={'class': 'form-control'}),
+        }

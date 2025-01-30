@@ -24,4 +24,7 @@ urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('carregar-dados/', UploadExcelView.as_view(), name='load_data'),
     path('logout/', logout_view, name='logout'),
+    
+    path('product-unit/create/', ProductUnitCreateView.as_view(), name='product_unit_create'),
+    # path('product-unit/update/<uuid:pk>/', ProductUnitUpdateView.as_view(), name='product_unit_update'),
 ]
