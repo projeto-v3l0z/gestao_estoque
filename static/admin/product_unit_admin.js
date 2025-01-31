@@ -268,3 +268,30 @@ $(document).ready(function() {
 
     updateFields();
 });
+
+(function($) {
+    $(document).ready(function() {
+        // Reinicializa o select2 quando a aba ou painel é exibido
+        $('a[data-toggle="tab"], .collapse').on('shown.bs.tab shown.bs.collapse', function() {
+            $('#id_product').select2({
+                ajax: {
+                    url: '/admin/product/autocomplete/',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return {
+                            term: params.term,
+                        };
+                    },
+                    processResults: function(data) {
+                        return {
+                            results: data.results,
+                        };
+                    },
+                    cache: true
+                },
+                minimumInputLength: 1,
+            });
+        });
+    });
+})(django.jQuery);
