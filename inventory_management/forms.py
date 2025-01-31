@@ -31,12 +31,12 @@ class UploadExcelForm(forms.Form):
 class ProductUnitForm(forms.ModelForm):
     class Meta:
         model = ProductUnit
-        exclude = ['qr_code_generated', 'was_written_off', 'write_off', ]
+        exclude = ['qr_code_generated', 'was_written_off', 'write_off','provider', 'building', 'room', 'hall', 'shelf']
         widgets = {
             'code': forms.TextInput(attrs={'class': 'form-control'}),
             'product': forms.Select(attrs={'class': 'form-control'}),
             'provider': forms.TextInput(attrs={'class': 'form-control'}),
-            'location': forms.Select(attrs={'class': 'form-control'}),
+            'location': forms.HiddenInput(),
             'building': forms.Select(attrs={'class': 'form-control'}),
             'room': forms.Select(attrs={'class': 'form-control'}),
             'hall': forms.Select(attrs={'class': 'form-control'}),
