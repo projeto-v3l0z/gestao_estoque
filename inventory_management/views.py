@@ -20,7 +20,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.shortcuts import get_object_or_404
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -332,6 +332,22 @@ class ProductUnitCreateView(PermissionRequiredMixin, CreateView):
     template_name = 'product_unit/form.html'   
     form_class = ProductUnitForm
     permission_required = 'inventory_management.add_productunit'
+
+    def get_success_url(self):
+        product_id = self.request.GET.get('product_id')
+        product = get_object_or_404(Product, id=product_id)
+        messages.success(self.request, f"Unidade(s) de Produto de {self.object.product.name} criada(s) com sucesso!")
+        return reverse_lazy('inventory_management:product_detail', kwargs={'slug': product.slug})
+
+    def get_initial(self):
+        initial = super().get_initial()
+        product_id = self.request.GET.get("product_id")
+        if product_id:
+            try:
+                initial["product"] = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                pass
+        return initial
     
 
 class ScanQRView(TemplateView):
