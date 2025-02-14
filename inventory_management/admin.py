@@ -1,5 +1,5 @@
 from django import forms
-from django.http import HttpResponseRedirect
+from django.http import JsonResponse
 from django.urls import reverse
 from django.urls import path
 from django.shortcuts import redirect
@@ -32,6 +32,22 @@ class PermissionAdmin(admin.ModelAdmin):
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'quantity', 'custom_display', 'created_by', 'created_at', 'updated_by', 'updated_at')
     search_fields = ('name',)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('autocomplete/', self.admin_site.admin_view(self.autocomplete_view), name='product_autocomplete'),
+        ]
+        return custom_urls + urls
+    
+    def autocomplete_view(self, request):
+        if 'term' in request.GET:
+            search_term = request.GET['term']
+            products = Product.objects.filter(name__icontains=search_term)[:10]  # Limita a 10 resultados apenas no autocomplete
+            results = [{'id': product.id, 'text': product.name} for product in products]
+            return JsonResponse({'results': results})
+        return JsonResponse({'results': []})
+    
     
     def custom_display(self, obj):
         if "liso" in obj.name.lower():
@@ -91,7 +107,7 @@ class ProductUnitAdmin(admin.ModelAdmin):
     fields = ['product', 'quantity', 'weight_length', 'incoming',]
     actions = [download_qr_codes, write_off_products, write_on_products]
     inlines = [ClothConsumptionInline, StockTransferInline]
-    
+    autocomplete_fields = ['product']
 
     class Media:
         js = (

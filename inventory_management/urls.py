@@ -22,7 +22,8 @@ urlpatterns = [
     path('get-write-off-status/<uuid:product_unit_id>/', get_write_off_status, name='get_write_off_status'),
     path('get-storage-type-is-store/', get_storage_type_is_store, name='get_storage_type_is_store'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
-    path('carregar-dados/', UploadExcelView.as_view(), name='load_data'),
+    path('carregar-produtos/', UploadProductsView.as_view(), name='upload_products'),
+    path('carregar-localizacoes/', UploadLocationsView.as_view(), name='upload_locations'),
     path('logout/', logout_view, name='logout'),
     
     path('product-unit/create/', ProductUnitCreateView.as_view(), name='product_unit_create'),

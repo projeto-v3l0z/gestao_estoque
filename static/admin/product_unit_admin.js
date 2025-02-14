@@ -268,3 +268,40 @@ $(document).ready(function() {
 
     updateFields();
 });
+
+(function($) {
+    $(document).ready(function() {
+        // Verifica se está na página de criação de unidade de produto
+        var isAddPage = window.location.href.indexOf('/add/') !== -1;
+
+        if (isAddPage) {
+            // Seleciona o campo de autocomplete
+            var $productField = $('#id_product');
+
+            // Configura o autocomplete apenas na página de criação
+            $productField.select2({
+                ajax: {
+                    url: '/admin/product/autocomplete/',  // URL do endpoint de autocomplete
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            term: params.term,  // Termo de pesquisa
+                        };
+                    },
+                    processResults: function (data) {
+                        return {
+                            results: data.results,  // Resultados retornados pelo endpoint
+                        };
+                    },
+                    cache: true
+                },
+                minimumInputLength: 1,  // Número mínimo de caracteres para iniciar a busca
+            });
+
+            // Força a renderização do Select2
+            $productField.select2('open');
+            $productField.select2('close');
+        }
+    });
+})(django.jQuery);

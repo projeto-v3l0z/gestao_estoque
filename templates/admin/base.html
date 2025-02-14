@@ -89,6 +89,23 @@
                         {% endif %}
                     </li>
                 {% endfor %}
+                {% if request.user.is_superuser %}
+                <li class="nav-item d-none d-sm-inline-block dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Carregar Dados do Excel
+                        </a>
+                        <div class="dropdown-menu">
+                            
+                                <a class="dropdown-item" href="{% url 'inventory_management:upload_products' %}">Carregar Produtos</a>
+                                <a class="dropdown-item" href="{% url 'inventory_management:upload_locations' %}">Carregar Localizações</a>
+                
+                        </div>
+    
+                </li>
+                {% endif %}
+                <li class="nav-item d-none d-sm-inline-block dropdown">
+                    <a href="{% url 'inventory_management:index'%}" class="nav-link" >Voltar para o site</a>
+                </li>
             </ul>
 
             {% if jazzmin_settings.search_model %}
