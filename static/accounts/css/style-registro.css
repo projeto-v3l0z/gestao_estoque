@@ -47,36 +47,22 @@ body {
 }
 
 .form .input-box {
-  width: 100%;
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
-.input-box label {
-  color: #333;
-  font-weight: 500;
+.form .input-box label {
+  margin-bottom: 4px;
 }
 
 .form :where(.input-box input, .select-box) {
-  position: relative;
-  height: 50px;
-  width: 100%;
-  outline: none;
-  font-size: 1rem;
-  color: #555;
-  margin-top: 8px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 0 20px;
-}
-
-.input-box input:focus {
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
-  border-color: #2487ce;
+  margin-top: 0;
+  padding: 10px;
 }
 
 .form .column {
   display: flex;
-  column-gap: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .form .gender-box {
@@ -128,17 +114,7 @@ body {
 }
 
 .form button {
-  height: 50px;
-  width: 100%;
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 500;
-  margin-top: 30px;
-  border: none;
-  cursor: pointer;
-  background: linear-gradient(135deg, #2487ce, #1d6da8);
-  border-radius: 8px;
-  transition: background 0.3s ease, transform 0.2s ease;
+  margin-top: 20px;
 }
 
 .form button:hover {
@@ -160,4 +136,17 @@ body {
   .form :where(.gender-option, .gender) {
     row-gap: 15px;
   }
+}
+
+/* Remove margens e paddings indesejados */
+form .row {
+  margin-bottom: 0;
+}
+
+form .col-md-6 {
+  padding: 0;
+}
+
+form div {
+  margin-bottom: 0 !important;
 }
