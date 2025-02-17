@@ -33,16 +33,19 @@ class ProductUnitForm(forms.ModelForm):
         model = ProductUnit
         exclude = ['qr_code_generated', 'was_written_off', 'write_off', ]
         widgets = {
-            'code': forms.TextInput(attrs={'class': 'form-control'}),
+            'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Código'}),
             'product': forms.Select(attrs={'class': 'form-control'}),
-            'provider': forms.TextInput(attrs={'class': 'form-control'}),
+            'provider': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Fornecedor'}),
             'location': forms.Select(attrs={'class': 'form-control'}),
             'building': forms.Select(attrs={'class': 'form-control'}),
             'room': forms.Select(attrs={'class': 'form-control'}),
             'hall': forms.Select(attrs={'class': 'form-control'}),
             'shelf': forms.Select(attrs={'class': 'form-control'}),
             'purchase_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
-            'weight_length': forms.NumberInput(attrs={'class': 'form-control'}),
-            'incoming': forms.NumberInput(attrs={'class': 'form-control'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantidade'}),
+            'weight_length': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Peso/Comprimento'}),
+            'incoming': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Entrada'}),
+
         }
+
+
