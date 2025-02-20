@@ -6,6 +6,7 @@ app_name = 'inventory_management'
 urlpatterns = [
     path('', IndexView.as_view(), name='index'),
     path('produtos/', ProductListView.as_view(), name='product_list'),
+    path('unidades/', ProductUnitListView.as_view(), name='product_unit_list'),
     path('produto/<slug:slug>/', ProductDetailView.as_view(), name='product_detail'),
     path('produto/<slug:product_slug>/unidade/<slug:slug>/', ProductUnitDetailView.as_view(), name='product_unit_detail'),
     path('escanearQR/', ScanQRView.as_view(), name='scan_qr'),

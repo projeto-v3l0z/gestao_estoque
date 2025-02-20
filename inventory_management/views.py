@@ -30,6 +30,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from reportlab.lib.utils import simpleSplit
 from django.contrib.auth import logout
+from django.db.models import Q
 
 
 
@@ -882,3 +883,40 @@ class UploadExcelView(View):
 def logout_view(request):
     logout(request)
     return redirect('admin:login')
+
+class ProductUnitListView(ListView):
+    model = ProductUnit
+    template_name = 'product_unit_list.html'
+    context_object_name = 'product_units'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        code_search = self.request.GET.get('code_search')  # Filtro por código
+        name_search = self.request.GET.get('name_search')  # Filtro por nome
+        location_id = self.request.GET.get('location')
+
+        if code_search:
+            queryset = queryset.filter(code__icontains=code_search)
+
+        if name_search:
+            queryset = queryset.filter(product__name__icontains=name_search)
+
+        if location_id:
+            queryset = queryset.filter(location__id=location_id)
+
+        return queryset.order_by('code')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['locations'] = StorageType.objects.all()
+        return context
+
+def create_product_unit(request):
+    if request.method == 'POST':
+        form = ProductUnitForm(request.POST)
+        if form.is_valid():
+            product_unit = form.save(commit=False)
+            
+            product_unit.save()
+            

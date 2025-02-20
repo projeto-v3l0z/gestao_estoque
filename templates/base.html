@@ -64,20 +64,7 @@
                 <li><a class="nav-link" href="{% url 'inventory_management:index' %}">Início</a></li>
                 <li><a class="nav-link" href="{% url 'inventory_management:about' %}">Sobre</a></li>
                 <li><a class="nav-link" href="{% url 'inventory_management:adresses' %}">Endereços</a></li>
-                <!-- <li class="dropdown"><a href="#"><span>Mais Opções</span> <i class="bi bi-chevron-down"></i></a>
-                    <ul>
-                        <li><a href="#">Drop Down 1</a></li>
-                        <li class="dropdown"><a href="#"><span>Deep Drop Down</span> <i class="bi bi-chevron-right"></i></a>
-                            <ul>
-                                <li><a href="#">Deep Drop Down 1</a></li>
-                                <li><a href="#">Deep Drop Down 2</a></li>
-                            </ul>
-                        </li>
-                        <li><a href="#">Drop Down 2</a></li>
-                    </ul>
-                </li> -->
-
-                
+                <li><a class="nav-link" href="{% url 'inventory_management:product_unit_list' %}">Lista de Unidades</a></li>
                 <li><a class="nav-link" href="{% url 'inventory_management:scan_qr' %}">Escanear QR Code</a></li>
                 {% if user|has_perm:"inventory_management.view_workspace" and user.is_authenticated %}
                     <li><a class="nav-link" href="{% url 'inventory_management:workspace' %}">Área de Trabalho</a></li>
