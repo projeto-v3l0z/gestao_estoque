@@ -63,6 +63,7 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
         product = self.get_object()
         write_off = self.request.GET.get('write_off')
         location_id = self.request.GET.get('location')
+        prd_code = self.request.GET.get('prd_code')  #lembraar
         building_id = self.request.GET.get('building')
         room_id = self.request.GET.get('room')
         hall_id = self.request.GET.get('hall')
@@ -70,6 +71,9 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
         search = self.request.GET.get('search')
 
         product_units = product.productunit_set.all()
+
+        if prd_code:  # Aplicar filtro por código do produto
+            product_units = product_units.filter(code__icontains=prd_code)
 
         if search:
            product_units = product_units.filter(code__contains=search.lower())
