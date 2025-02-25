@@ -884,7 +884,7 @@ def logout_view(request):
     logout(request)
     return redirect('admin:login')
 
-class ProductUnitListView(ListView):
+class ProductUnitListView(LoginRequiredMixin, ListView):
     model = ProductUnit
     template_name = 'product_unit_list.html'
     context_object_name = 'product_units'
