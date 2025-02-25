@@ -30,7 +30,7 @@
         <div class="col-12 col-md-4">
             <div class="card border-0">
                 <div class="card-body p-2">
-                    <h5 class="m-0 mb-2">Filtros de Localização</h5>
+                    <h5 class="m-0 mb-2">Filtros</h5>
                     <form id="location_filter_form" method="GET">
                         <label class="form-label m-0">Tipo de Depósito</label>
                         <select name="location" id="location" class="form-select form-select-sm mb-2">
@@ -43,6 +43,15 @@
                             {% endfor %}
                         </select>
                         <button type="submit" class="btn btn-primary btn-sm w-100">Aplicar Filtros</button>
+                    </form>
+                    
+                    <!-- Filtro de PRD  -->
+                    <label class="form-label mt-2">Filtro por PRD</label>
+                    <form id="prd_filter_form" method="GET" class="mt-0">
+                        <div class="input-group">
+                            <input type="text" class="form-control m-0" id="prd_code" name="prd_code" value="{{ request.GET.prd_code }}" placeholder="Filtrar por Código do Produto (ex: PRD-001)">
+                            <button type="submit" class="btn btn-primary btn-sm w-100 mt-2">Aplicar Filtros</button>
+                        </div>
                     </form>
                 </div>
             </div>
