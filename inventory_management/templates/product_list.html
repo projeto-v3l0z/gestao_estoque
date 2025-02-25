@@ -9,7 +9,7 @@
                 <div class="row justify-content-center">
                     <div class="col-md-8 col-lg-6">
                         <div class="input-group">
-                            <input type="text" class="form-control" id="search" name="search" value="{{ request.GET.search }}" placeholder="Pesquisar Produto">
+                            <input type="text" class="form-control " id="search" name="search" placeholder="Pesquisar Produto">
                             <button type="submit" class="btn btn-primary">Buscar</button>
                         </div>
                     </div>
@@ -81,3 +81,14 @@
 </div>
 
 {% endblock %}
+
+<script>
+    function validateSearch() {
+        var searchInput = document.getElementById('search');
+        searchInput.value = searchInput.value.trim();
+        if (searchInput.value == '') {
+            return false;
+        }
+        return true;
+    }
+</script>

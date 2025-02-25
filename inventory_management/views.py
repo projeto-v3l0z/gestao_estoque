@@ -47,9 +47,11 @@ class ProductListView(PermissionRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        search = self.request.GET.get('search')
+        search = self.request.GET.get('search', '').strip()
+        
         if search:
             queryset = queryset.filter(name__icontains=search.lower())
+            
         return queryset.order_by('name')
 
 
