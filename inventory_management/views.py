@@ -30,53 +30,6 @@ from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from reportlab.lib.utils import simpleSplit
 from django.contrib.auth import logout
-from django.views.decorators.csrf import csrf_exempt
-from .models import Product
-
-
-@csrf_exempt
-def check_product_status(request):
-    if request.method == 'POST':
-        product_id = request.POST.get('product_id')
-        try:
-            product = ProductUnit.objects.get(code=product_id)
-            return JsonResponse({'status': product.status})  
-        except ProductUnit.DoesNotExist:
-            return JsonResponse({'error': 'Produto não encontrado.'}, status=404)
-    return JsonResponse({'error': 'Método não permitido.'}, status=405)
-
-@csrf_exempt
-def recommission_product(request):
-    if request.method == 'POST':
-        product_id = request.POST.get('product_id')
-        try:
-            product = ProductUnit.objects.get(code=product_id)
-            if product.status == "baixado":
-                product.status = "disponível"  
-                product.save()
-                return JsonResponse({'success': 'Produto recomissionado com sucesso.'})
-            else:
-                return JsonResponse({'error': 'Este produto não foi baixado e não pode ser recomissionado.'}, status=400)
-        except ProductUnit.DoesNotExist:
-            return JsonResponse({'error': 'Produto não encontrado.'}, status=404)
-    return JsonResponse({'error': 'Método não permitido.'}, status=405)
-
-class IndexView(LoginRequiredMixin, TemplateView):
-    template_name = 'index.html'
-
-class ProductListView(PermissionRequiredMixin, ListView):
-    model = Product
-    template_name = 'product_list.html'
-    context_object_name = 'products'
-    paginate_by = 10
-    permission_required = 'inventory_management.view_product'
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        search = self.request.GET.get('search')
-        if search:
-            queryset = queryset.filter(name__icontains=search.lower())
-        return queryset.order_by('name')
 
 
 
@@ -685,56 +638,6 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
 
         print("Invalid action")  # Debug: Indicate invalid action
         return JsonResponse({'error': 'Ação inválida'}, status=400)
-
-@csrf_exempt
-def add_to_workspace(request):
-    if request.method == 'POST':
-        product_id = request.POST.get('product_id')  # ID do produto enviado via AJAX
-        try:
-            # Busca o produto no banco de dados
-            product = ProductUnit.objects.get(code=product_id)
-            
-            # Caso 1: Transferir/Dar baixa
-            if product.status == 'baixado':  # Supondo que o status do produto seja 'baixado'
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Este produto já foi baixado e não pode ser incluído.'
-                })
-            
-            # Caso 2: Recomissionar
-            elif product.status == 'ativo':  # Supondo que o status do produto seja 'ativo'
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Este produto não foi baixado e não pode ser incluído.'
-                })
-            
-            # Caso 3: Produto pode ser incluído (status diferente de 'baixado' e 'ativo')
-            else:
-                # Verifica se o produto já está na área de trabalho do usuário
-                if WorkSpace.objects.filter(user=request.user, product=product).exists():
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Este produto já está na sua área de trabalho.'
-                    })
-                
-                # Adiciona o produto à área de trabalho
-                WorkSpace.objects.create(user=request.user, product=product)
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Produto adicionado à área de trabalho com sucesso.',
-                    'reload': True  # Recarregar a página após a ação
-                })
-        
-        except ProductUnit.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': 'Produto não encontrado.'
-            })
-    
-    return JsonResponse({
-        'success': False,
-        'message': 'Método não permitido.'
-    })
 
 
 def delete_workspace(request, code):
