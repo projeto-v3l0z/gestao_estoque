@@ -114,6 +114,48 @@
                     {% endfor %}
                 </select>
             </div>
+             <!-- Campos de depósito, corredor, sala, prateleira -->
+            <div class="col-12 text-center">
+                <button type="submit" id="transfer_btn" name="transfer_btn" class="btn btn-primary">
+                    <i class="bi bi-arrow-right"></i> Transferir
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para baixar produtos -->
+<div class="modal fade" id="confirmationModalBaixa" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Confirmação de Baixas</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Tem certeza de que deseja dar baixa nesses produtos?
+                <form id="write_off_form" method="post" action="">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="write_off_destination" class="form-label">Destinatário da Baixa:</label>
+                        <select name="write_off_destination" id="write_off_destination" class="form-select">
+                            {% for write_off_destination in write_off_destinations %}
+                            <option value="{{ write_off_destination.id }}">{{ write_off_destination }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="write_off" value="True">
+                    </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-warning">Confirmar Baixa</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
             <div class="form-group" style="display: none;" id="buildingGroup">
                 <label for="building">Depósito:</label>
                 <select name="building" id="building" class="form-select">
@@ -213,107 +255,110 @@
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+    // Função para recomissionar produto
+    function recommendProduct(product_id) {
+        $.ajax({
+            type: 'POST',
+            uurl: '{% url "inventory_management:check_product_status" %}'
+            data: {
+                "product_id": product_id,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function (response) {
+                if (response.status !== "baixado") {
+                    alert("Este produto não foi baixado e não pode ser recomissionado.");
+                } else {
+                    $.ajax({
+                        type: 'POST',
+                       url: '{% url "inventory_management:recommission_product" %}'
+                        data: {
+                            "product_id": product_id,
+                            'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                alert("Produto recomissionado com sucesso!");
+                                location.reload();
+                            }
+                        }
+                    });
+                }
+            },
+            error: function (xhr, errmsg, err) {
+                console.log(xhr.status + ": " + xhr.responseText);
+            }
+        });
+    }
+
+    // Função para leitura de QR Code
     let qrCodeReadingActive = true;
 
     function onScanSuccess(decodedText, decodedResult) {
         console.log("onScanSuccess called");
         if (!qrCodeReadingActive) return;
-    
+
         qrCodeReadingActive = false;
-    
+
         var url = decodedText;
         console.log("Decoded URL:", url);
-    
+
         var match = url.match(/prd-\d+/i);
         console.log("Regex match result:", match);
-    
+
         if (match) {
             var product_id = match[0];
-            console.log("Product ID:", product_id); 
-    
-            $.ajax({
-                type: 'POST',
-                data: {
-                    "product_id": product_id,
-                    'csrfmiddlewaretoken': '{{ csrf_token }}'
-                },
-                success: function (response) {
-                    if (response.success) {
-                        if (response.reload) {
-                            //alert(response.success);
-                            location.reload();
-                        }
-                        if (response.transfer) {
-                            var response = JSON.parse(response);
-                            alert(response);
-                            location.reload();
-                        }
-                    }
-                },
-                error: function (xhr, errmsg, err) {
-                    console.log(xhr.status + ": " + xhr.responseText);
-                    var response = JSON.parse(xhr.responseText);
-                    var errorMessage = response.error;
-                    alert(errorMessage);
-                    location.reload();
-                },
-            });
+            console.log("Product ID:", product_id);
+
+         $.ajax({
+    type: 'POST',
+    url: '{% url "inventory_management:add_to_workspace" %}',
+    data: {
+        "product_id": product_id,
+        'csrfmiddlewaretoken': '{{ csrf_token }}'
+    },
+    success: function (response) {
+        if (response.success) {
+            alert(response.message);  // Exibe mensagem de sucesso
+            if (response.reload) {
+                location.reload();  // Recarrega a página
+            }
+        } else {
+            alert(response.message);  // Exibe mensagem de erro
+        }
+    },
+    error: function (xhr, status, error) {
+        alert('Erro ao processar a solicitação.');
+    }
+});
         } else {
             alert("Código do produto não encontrado.");
         }
     }
-    
-    $(document).ready(function () {
-    $('form').submit(function (event) {
-        event.preventDefault();
-
-        var formData = $(this).serialize();
-        console.log("Form Data:", formData);  // Debug: Print form data
-
-        $.ajax({
-            type: 'POST',
-            data: formData,
-            dataType: 'json',
-            success: function (response) {
-                if (response.success) {
-                    if (response.reload) {
-                        location.reload();
-                    }
-                } else {
-                    console.log(response.error);
-                }
-            },
-            error: function (xhr, errmsg, err) {
-                console.log(xhr.status + ": " + xhr.responseText);
-            },
-        });
-    });
-});
 
     function onScanFailure(error) {
         console.warn(`Code scan error = ${error}`);
     }
 
+    // Inicializa o leitor de QR Code
     let html5QrcodeScanner = new Html5QrcodeScanner(
         "reader",
-        { fps: 10, qrbox: { width: 250, height: 250 } },  /* verbose= */ false);
-    
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        false
+    );
     html5QrcodeScanner.render(onScanSuccess, onScanFailure);
 
-</script>
-
-<script>
+    // Função para atualizar campos de depósito, corredor, sala e prateleira
     $(document).ready(function() {
         function updateFields() {
             var locationSelected = $('#location').val();
-    
+
             if (locationSelected && locationSelected !== "None") {
                 $.ajax({
                     url: '/get-storage-type-is-store/',
                     data: { 'id': locationSelected },
                     success: function(data) {
                         var isStore = data.is_store;
-    
+
                         if (isStore) {
                             $('#buildingGroup').show();
                         } else {
@@ -323,14 +368,14 @@
                             $('#shelfGroup').hide();
                             return;
                         }
-    
+
                         var buildingSelected = $('#building').val();
                         if (buildingSelected) {
                             getBuildingProperties(buildingSelected).then(function(properties) {
                                 var hallSelected = $('#hall').val();
                                 var roomSelected = $('#room').val();
                                 var shelfSelected = $('#shelf').val();
-    
+
                                 if (properties.has_hall) {
                                     $('#hallGroup').show();
                                     updateHalls(buildingSelected, hallSelected).then(function() {
@@ -395,14 +440,14 @@
                 $('#shelfGroup').hide();
             }
         }
-    
+
         function getBuildingProperties(buildingId) {
             return $.ajax({
                 url: '/get-building-properties/',
                 data: { 'building_id': buildingId }
             });
         }
-    
+
         function updateHalls(buildingId, selectedHall) {
             return $.ajax({
                 url: '/get-halls/',
@@ -420,7 +465,7 @@
                 }
             });
         }
-    
+
         function updateRoomsByBuilding(buildingId, selectedRoom) {
             return $.ajax({
                 url: '/get-rooms/',
@@ -438,7 +483,7 @@
                 }
             });
         }
-    
+
         function updateRoomsByHall(hallId, selectedRoom) {
             return $.ajax({
                 url: '/get-rooms/',
@@ -456,7 +501,7 @@
                 }
             });
         }
-    
+
         function updateShelvesByBuilding(buildingId, selectedShelf) {
             return $.ajax({
                 url: '/get-shelves/',
@@ -474,7 +519,7 @@
                 }
             });
         }
-    
+
         function updateShelvesByRoom(roomId, selectedShelf) {
             return $.ajax({
                 url: '/get-shelves/',
@@ -492,29 +537,24 @@
                 }
             });
         }
-    
+
         $('#location').change(function() {
             updateFields();
         });
-    
+
         $('#building').change(function() {
             updateFields();
         });
-    
+
         $('#hall').change(function() {
             updateFields();
         });
-    
+
         $('#room').change(function() {
             updateFields();
         });
-    
+
         updateFields();
     });
-    </script>
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+</script>
 {% endblock extra_scripts %}

@@ -8,6 +8,7 @@ import uuid
 from django.db.models import Sum, F, FloatField, Max
 from decimal import Decimal, ROUND_HALF_UP
 
+
 class Color(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField("Nome da Cor", max_length=100)
