@@ -505,6 +505,148 @@ def get_qr_size(size_preset):
 
 
 @method_decorator(login_required, name='dispatch')
+class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
+    template_name = 'workspace_write_off.html'
+    model = WorkSpace
+    permission_required = 'inventory_management.view_workspace'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(user=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_transfer'] = self.request.user.has_perm('inventory_management.add_stocktransfer')
+        context['can_write_off'] = self.request.user.has_perm('inventory_management.add_write_off')
+        context['write_off_destinations'] = WriteOffDestinations.objects.all()
+        context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
+        context['shelves'] = Shelf.objects.all()
+        context['buildings'] = Building.objects.all()
+        context['rooms'] = Rooms.objects.all()
+        context['halls'] = Hall.objects.all()
+        context['product_count'] = WorkSpace.objects.filter(user=self.request.user).count()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        try:
+            print("POST data:", request.POST)  # Debug: Print the POST data
+
+            if 'clean' in request.POST:
+                print("Cleaning workspace")
+                WorkSpace.objects.filter(user=request.user).delete()
+                return JsonResponse({'success': 'Produtos removidos com sucesso', 'reload': True}, status=200)
+
+            product_id = request.POST.get('product_id')
+            remove = request.POST.get('remove')
+            write_off_destination_id = request.POST.get('write_off_destination')
+
+            if write_off_destination_id:
+                print("Processing write off")
+                write_off_destination = get_object_or_404(WriteOffDestinations, pk=write_off_destination_id)
+                for product in WorkSpace.objects.filter(user=request.user):
+                    product_unit = product.product
+                    product_unit.write_off = True
+                    product_unit.save()
+
+                    origin = product_unit.shelf if product_unit.shelf else product_unit.location
+                    Write_off.objects.create(
+                        product_unit=product_unit,
+                        origin=origin,
+                        storage_type=StorageType.objects.get_or_create(name="Baixa")[0],
+                        write_off_date=timezone.now(),
+                        observations="Baixa de produto",
+                        write_off_destination=write_off_destination,
+                        created_by=request.user,
+                    )
+
+                WorkSpace.objects.filter(user=request.user).delete()
+                return JsonResponse({'success': 'Produtos baixados com sucesso', 'reload': True}, status=200)
+
+            if remove:
+                print("Removing product from workspace")
+                workspace_item = get_object_or_404(WorkSpace, user=request.user, product__code=remove)
+                workspace_item.delete()
+                return JsonResponse({'success': 'Produto removido da área de trabalho', 'reload': True}, status=200)
+
+            if product_id:
+                product = get_object_or_404(ProductUnit, code=product_id.upper())
+                if WorkSpace.objects.filter(user=request.user, product=product).exists():
+                    return JsonResponse({'error': 'Produto já está na sua área de trabalho', 'reload': True}, status=400)
+                if product.write_off is False:
+                    return JsonResponse({'error': 'Esse produto não está baixado', 'reload': True}, status=400)
+
+                WorkSpace.objects.create(user=request.user, product=product)
+                return JsonResponse({'success': 'Produto adicionado à área de trabalho', 'reload': True}, status=200)
+
+            if request.POST.get('transfer') is not None:
+                location_id = request.POST.get('location')
+                if not location_id or location_id == "None":
+                    return JsonResponse({'error': 'ID de localização inválido'}, status=400)
+
+                destination = get_object_or_404(StorageType, id=location_id)
+
+                building_id = request.POST.get('building')
+                building = Building.objects.filter(pk=building_id).first() if building_id else None
+
+                room_id = request.POST.get('room')
+                room = Rooms.objects.filter(pk=room_id).first() if room_id else None
+
+                hall_id = request.POST.get('hall')
+                hall = Hall.objects.filter(pk=hall_id).first() if hall_id else None
+
+                shelf_id = request.POST.get('shelf')
+                shelf = Shelf.objects.filter(pk=shelf_id).first() if shelf_id else None
+
+                observations = request.POST.get('observations', '')
+
+                for product in WorkSpace.objects.filter(user=request.user):
+                    product_unit = product.product
+
+                    StockTransfer.objects.create(
+                        product_unit=product_unit,
+                        origin_storage_type=product_unit.location,
+                        origin_building=product_unit.building,
+                        origin_hall=product_unit.hall,
+                        origin_room=product_unit.room,
+                        origin_shelf=product_unit.shelf,
+                        destination_storage_type=destination,
+                        destination_shelf=shelf,
+                        destination_building=building,
+                        destination_room=room,
+                        destination_hall=hall,
+                        transfer_date=timezone.now(),
+                        observations=observations,
+                        created_by=request.user,
+                    )
+
+                    product_unit.location = destination
+
+                    if destination.is_store:
+                        product_unit.building_id = building
+                        product_unit.room_id = room
+                        product_unit.hall_id = hall
+                        product_unit.shelf_id = shelf
+                    else:
+                        product_unit.building_id = None
+                        product_unit.room_id = None
+                        product_unit.hall_id = None
+                        product_unit.shelf_id = None
+
+                    product_unit.save()
+
+                WorkSpace.objects.filter(user=request.user).delete()
+                return JsonResponse({'success': 'Produtos transferidos com sucesso', 'transfer': True, 'reload': True}, status=200)
+            else:
+                print("Transfer button not pressed")
+
+        except Exception as e:
+            print("Exception occurred:", str(e))  # Debug: Print the exception
+            return JsonResponse({'error': str(e)}, status=400)
+
+        print("Invalid action")  # Debug: Indicate invalid action
+        return JsonResponse({'error': 'Ação inválida'}, status=400)
+
+@method_decorator(login_required, name='dispatch')
 class WorkSpaceView(PermissionRequiredMixin ,ListView):
     template_name = 'workspace.html'
     model = WorkSpace
