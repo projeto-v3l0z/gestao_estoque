@@ -28,4 +28,5 @@ urlpatterns = [
     
     path('product-unit/create/', ProductUnitCreateView.as_view(), name='product_unit_create'),
     # path('product-unit/update/<uuid:pk>/', ProductUnitUpdateView.as_view(), name='product_unit_update'),
+    path('product-autocomplete/', ProductAutoComplete.as_view(), name='product-autocomplete'),
 ]

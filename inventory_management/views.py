@@ -31,7 +31,7 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from reportlab.lib.utils import simpleSplit
 from django.contrib.auth import logout
 from django.db.models import Q
-
+from django_select2.views import AutoResponseView
 
 
 class IndexView(LoginRequiredMixin, TemplateView):
@@ -926,3 +926,11 @@ def create_product_unit(request):
             
             product_unit.save()
             
+
+class ProductAutoComplete(View):
+    def get(self, request, *args, **kwargs):
+        term = request.GET.get("q", "").strip()  # Captura a busca digitada no Select2
+        produtos = Product.objects.filter(name__icontains=term)[:3]  # Busca limitada a 10 resultados
+        results = [{"id": produto.id, "text": produto.name} for produto in produtos]
+        return JsonResponse({"results": results})
+    

@@ -66,6 +66,12 @@
                 <li><a class="nav-link" href="{% url 'inventory_management:adresses' %}">Endereços</a></li>
                 <li><a class="nav-link" href="{% url 'inventory_management:product_unit_list' %}">Lista de Unidades</a></li>
                 <li><a class="nav-link" href="{% url 'inventory_management:scan_qr' %}">Escanear QR Code</a></li>
+                {% if user|has_perm:"inventory_management.view_product" and user.is_authenticated %}
+                    <li><a class="nav-link" href="{% url 'inventory_management:product_list' %}">Lista de Produtos</a></li>
+                {% endif %}
+                {% if user|has_perm:"inventory_management.add_product" and user.is_authenticated %}
+                    <li><a class="nav-link" href="{% url 'inventory_management:product_unit_create' %}">Criar Unidade</a></li>
+                {% endif %}
                 {% if user|has_perm:"inventory_management.view_workspace" and user.is_authenticated %}
                     <li><a class="nav-link" href="{% url 'inventory_management:workspace' %}">Área de Trabalho</a></li>
                 {% endif %}

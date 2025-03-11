@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'accounts.apps.AccountsConfig',
     'inventory_management.apps.InventoryManagementConfig',
+    'django_select2',
 ]
 
 MIDDLEWARE = [
@@ -103,7 +104,6 @@ DATABASES = {
 }
 
 DATABASES['default'] = DATABASES[os.environ.get('DB_USED')] if os.environ.get('DB_USED') else DATABASES['sqlite']
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
