@@ -5,15 +5,17 @@
 <div class="row justify-content-center align-items-center g-2 py-3">
     <div class="col-12">
         <h1 class="">Minha área de trabalho Baixas</h1>
-        <div id="reader" class="qr-code-reader"></div> 
+        <div id="reader" class="qr-code-reader"></div>
     </div>
     <div class="col-12">
         <h2>Produtos na área de trabalhos:</h2>
-        <table class="table">
+        <table class="table" id="itens">
             <thead>
                 <tr>
                     <th>Produto</th>
                     <th>Código</th>
+                    <th>Metragem</th>
+                    <th>Localização</th>
                     <th>Ações</th>
                 </tr>
             </thead>
@@ -22,8 +24,22 @@
                 <tr>
                     <td>{{ workspace.product.product|title }}</td>
                     <td>{{ workspace.product.code }}</td>
+                    <td><input type="number" class="form-control" name="quantity"
+                            data-productid="{{ workspace.product.id }}" placeholder="valor passado: {{ workspace.product.weight_length }}" min="0"
+                            step="0.01" required></td>
                     <td>
-                        <a href={% url "inventory_management:delete_workspace" code=workspace.product.code %} class="btn btn-outline-danger btn-sm">
+                        <select class="form-select" name="location" id="location" required>
+                            <option value="">---------</option>
+                            {% for location in storage_types %}
+                            <option value="{{ location.id }}" {% if workspace.storage_type.id == location.id %} selected
+                                {% endif %}>{{ location.name }}</option>
+                            {% endfor %}
+                        </select>
+
+                    </td>
+                    <td>
+                        <a href={% url "inventory_management:delete_workspace_write_off"  code=workspace.product.code %}
+                            class="btn btn-outline-danger btn-sm">
                             <i class="bi bi-trash"></i>
                         </a>
 
@@ -38,15 +54,19 @@
         </table>
         <div class="col-12 g-3">
             <div class="row justify-content-center align-items-center">
-                {% if can_write_off %} 
+                {% if can_write_off %}
                 <div class="col-md-4 col-12 mb-2">
-                    <button type="button" class="btn btn-warning w-100 {% if object_list %} {% else %} disabled {% endif %} " data-toggle="modal" data-target="#confirmationModalRecomissionar">
+                    <button type="button"
+                        class="btn btn-warning w-100 {% if object_list %} {% else %} disabled {% endif %} "
+                        data-toggle="modal" data-target="#recomissionModal">
                         <i class="bi bi-arrow-repeat"></i> Recomissionar
                     </button>
                 </div>
                 {% endif %}
                 <div class="col-md-4 col-12 mb-2">
-                    <button type="button" class="btn btn-danger w-100 {% if object_list %} {% else %} disabled {% endif %} " data-toggle="modal" data-target="#confirmationModal">
+                    <button type="button"
+                        class="btn btn-danger w-100 {% if object_list %} {% else %} disabled {% endif %} "
+                        data-toggle="modal" data-target="#confirmationModal">
                         <i class="bi bi-trash"></i> Limpar área de trabalho
                     </button>
                 </div>
@@ -61,131 +81,63 @@
 </div>
 
 
-<div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalLabel">Limpar Área de trabalho</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          Tem certeza de que deseja limpar a área de trabalho?
-          <br>
-            <div class="form-group">
-                <form id="clean" method="post" action="">
-                    {% csrf_token %}
-                    <input type="hidden" name="clean" value="True">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Limpar Área de trabalho</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Tem certeza de que deseja limpar a área de trabalho?
+                <br>
+                <div class="form-group">
+                    <form id="clean" method="post" action="">
+                        {% csrf_token %}
+                        <input type="hidden" name="clean" value="True">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-danger">Limpar</button>
+                </form>
             </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-danger">Limpar</button>
-            </form>
-        </div>
-      </div>
-    </div>       
-</div>
-<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasExample" aria-labelledby="offcanvasExampleLabel">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="offcanvasExampleLabel">Fazer Transferência</h5>
-        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
-    <div class="offcanvas-body">
-        <form method="post" class="row g-3">
-            {% csrf_token %}
-            <input type="hidden" name="transfer" value="True">
-            <div class="form-group">
-                <label for="location">Tipo de Depósito:</label>
-                <select name="location" id="location" class="form-select">
-                    <option value="None" selected>---------</option>
-                    {% for storage_type in storage_types %}
-                    <option value="{{ storage_type.id }}">{{ storage_type }}</option>
-                    {%empty%}
-                    <option value="None">Nenhum depósito cadastrado</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group" style="display: none;" id="buildingGroup">
-                <label for="building">Depósito:</label>
-                <select name="building" id="building" class="form-select">
-                    <option value="" selected>---------</option>
-                    {% for building in buildings %}
-                    <option value="{{ building.id }}">{{ building }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-group" style="display: none;" id="hallGroup">
-                <label for="hall">Corredor:</label>
-                <select name="hall" id="hall" class="form-select">
-                    <option value="" selected>---------</option>
-                    {% for hall in halls %}
-                    <option value="{{ hall.id }}">{{ hall }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group" style="display: none;" id="roomGroup">
-                <label for="room">Sala:</label>
-                <select name="room" id="room" class="form-select">
-                    <option value="" selected>---------</option>
-                    {% for room in rooms %}
-                    <option value="{{ room.id }}">{{ room }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group" style="display: none;" id="shelfGroup">
-                <label for="shelf">Prateleira:</label>
-                <select name="shelf" id="shelf" class="form-select">
-                    <option value="" selected>---------</option>
-                    {% for shelf in shelves %}
-                    <option value="{{ shelf.id }}">{{ shelf }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-12">
-                <label for="observations" class="form-label">Observações:</label>
-                <textarea name="observations" id="observations" class="form-control"></textarea>
-            </div>
-            <div class="col-12 text-center">
-                <button type="submit" id="transfer_btn" name="transfer_btn" class="btn btn-primary"><i class="bi bi-arrow-right"></i> Transferir</button>
-            </div>
-        </form>
-    </div>            
 </div>
-<div class="modal fade" id="confirmationModalRecomissionar" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+
+<div class="modal fade" id="recomissionModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalLabel">Confirmação de Baixas</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          Tem certeza de que deseja dar baixa nesses produtos?
-          <br>
-            <div class="form-group">
-                <label for="write_off_destination" class="form-label">Destinatário da Baixa:</label>
-                <form id="write_off_form" method="post" action="">
-                    {% csrf_token %}
-                    <select name="write_off_destination" id="write_off_destination" class="form-select">
-                        {% for write_off_destination in write_off_destinations %}
-                        <option value="{{ write_off_destination.id }}">{{ write_off_destination }}</option>
-                        {% endfor %}
-                    </select>
-                    <input type="hidden" name="write_off" value="True">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Recomissionar Itens</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Tem certeza de que deseja recomissionar os itens?
+                <br>
+                <div class="form-group">
+                    <form id="recomission" method="post" action="">
+                        {% csrf_token %}
+                        <input type="hidden" name="recomission" value="True">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" onclick="recomissionItens()">Recomissionar</button>
+                </form>
             </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-warning">Confirmar Baixa</button>
-            </form>
-        </div>
-      </div>
-    </div> 
+    </div>
 </div>
+</div>
+
 {% endblock content %}
 
 {% block extra_styles %}
@@ -193,15 +145,22 @@
     .qr-code-reader {
         margin-bottom: 20px;
         border-radius: 10px;
-        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2); /* Adicionando sombreamento */
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        /* Adicionando sombreamento */
     }
 </style>
 {% endblock extra_styles %}
 
 {% block extra_scripts %}
-<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
+    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"></script>
 
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -211,19 +170,19 @@
     function onScanSuccess(decodedText, decodedResult) {
         console.log("onScanSuccess called");
         if (!qrCodeReadingActive) return;
-    
+
         qrCodeReadingActive = false;
-    
+
         var url = decodedText;
         console.log("Decoded URL:", url);
-    
+
         var match = url.match(/prd-\d+/i);
         console.log("Regex match result:", match);
-    
+
         if (match) {
             var product_id = match[0];
-            console.log("Product ID:", product_id); 
-    
+            console.log("Product ID:", product_id);
+
             $.ajax({
                 type: 'POST',
                 data: {
@@ -255,33 +214,33 @@
             alert("Código do produto não encontrado.");
         }
     }
-    
+
     $(document).ready(function () {
-    $('form').submit(function (event) {
-        event.preventDefault();
+        $('form').submit(function (event) {
+            event.preventDefault();
 
-        var formData = $(this).serialize();
-        console.log("Form Data:", formData);  // Debug: Print form data
+            var formData = $(this).serialize();
+            console.log("Form Data:", formData);  // Debug: Print form data
 
-        $.ajax({
-            type: 'POST',
-            data: formData,
-            dataType: 'json',
-            success: function (response) {
-                if (response.success) {
-                    if (response.reload) {
-                        location.reload();
+            $.ajax({
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        if (response.reload) {
+                            location.reload();
+                        }
+                    } else {
+                        console.log(response.error);
                     }
-                } else {
-                    console.log(response.error);
-                }
-            },
-            error: function (xhr, errmsg, err) {
-                console.log(xhr.status + ": " + xhr.responseText);
-            },
+                },
+                error: function (xhr, errmsg, err) {
+                    console.log(xhr.status + ": " + xhr.responseText);
+                },
+            });
         });
     });
-});
 
     function onScanFailure(error) {
         console.warn(`Code scan error = ${error}`);
@@ -290,23 +249,23 @@
     let html5QrcodeScanner = new Html5QrcodeScanner(
         "reader",
         { fps: 10, qrbox: { width: 250, height: 250 } },  /* verbose= */ false);
-    
+
     html5QrcodeScanner.render(onScanSuccess, onScanFailure);
 
 </script>
 
 <script>
-    $(document).ready(function() {
+    $(document).ready(function () {
         function updateFields() {
             var locationSelected = $('#location').val();
-    
+
             if (locationSelected && locationSelected !== "None") {
                 $.ajax({
                     url: '/get-storage-type-is-store/',
                     data: { 'id': locationSelected },
-                    success: function(data) {
+                    success: function (data) {
                         var isStore = data.is_store;
-    
+
                         if (isStore) {
                             $('#buildingGroup').show();
                         } else {
@@ -316,21 +275,21 @@
                             $('#shelfGroup').hide();
                             return;
                         }
-    
+
                         var buildingSelected = $('#building').val();
                         if (buildingSelected) {
-                            getBuildingProperties(buildingSelected).then(function(properties) {
+                            getBuildingProperties(buildingSelected).then(function (properties) {
                                 var hallSelected = $('#hall').val();
                                 var roomSelected = $('#room').val();
                                 var shelfSelected = $('#shelf').val();
-    
+
                                 if (properties.has_hall) {
                                     $('#hallGroup').show();
-                                    updateHalls(buildingSelected, hallSelected).then(function() {
+                                    updateHalls(buildingSelected, hallSelected).then(function () {
                                         if (properties.has_room) {
                                             $('#roomGroup').show();
                                             if (hallSelected) {
-                                                updateRoomsByHall(hallSelected, roomSelected).then(function() {
+                                                updateRoomsByHall(hallSelected, roomSelected).then(function () {
                                                     if (properties.has_shelf) {
                                                         $('#shelfGroup').show();
                                                         updateShelvesByRoom(roomSelected, shelfSelected);
@@ -339,7 +298,7 @@
                                                     }
                                                 });
                                             } else {
-                                                updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
+                                                updateRoomsByBuilding(buildingSelected, roomSelected).then(function () {
                                                     if (properties.has_shelf) {
                                                         $('#shelfGroup').show();
                                                         updateShelvesByBuilding(buildingSelected, shelfSelected);
@@ -357,7 +316,7 @@
                                     $('#hallGroup').hide();
                                     if (properties.has_room) {
                                         $('#roomGroup').show();
-                                        updateRoomsByBuilding(buildingSelected, roomSelected).then(function() {
+                                        updateRoomsByBuilding(buildingSelected, roomSelected).then(function () {
                                             if (properties.has_shelf) {
                                                 $('#shelfGroup').show();
                                                 updateShelvesByBuilding(buildingSelected, shelfSelected);
@@ -377,7 +336,7 @@
                             $('#shelfGroup').hide();
                         }
                     },
-                    error: function() {
+                    error: function () {
                         console.error('Failed to fetch storage type data.');
                     }
                 });
@@ -388,22 +347,22 @@
                 $('#shelfGroup').hide();
             }
         }
-    
+
         function getBuildingProperties(buildingId) {
             return $.ajax({
                 url: '/get-building-properties/',
                 data: { 'building_id': buildingId }
             });
         }
-    
+
         function updateHalls(buildingId, selectedHall) {
             return $.ajax({
                 url: '/get-halls/',
                 data: { 'building_id': buildingId },
-                success: function(data) {
+                success: function (data) {
                     $('#hall').empty();
                     $('#hall').append($('<option>').text('---------').attr('value', ''));
-                    $.each(data, function(index, value) {
+                    $.each(data, function (index, value) {
                         var option = $('<option>').text(value.name).attr('value', value.id);
                         if (value.id == selectedHall) {
                             option.attr('selected', 'selected');
@@ -413,15 +372,15 @@
                 }
             });
         }
-    
+
         function updateRoomsByBuilding(buildingId, selectedRoom) {
             return $.ajax({
                 url: '/get-rooms/',
                 data: { 'building_id': buildingId },
-                success: function(data) {
+                success: function (data) {
                     $('#room').empty();
                     $('#room').append($('<option>').text('---------').attr('value', ''));
-                    $.each(data, function(index, value) {
+                    $.each(data, function (index, value) {
                         var option = $('<option>').text(value.name).attr('value', value.id);
                         if (value.id == selectedRoom) {
                             option.attr('selected', 'selected');
@@ -431,15 +390,15 @@
                 }
             });
         }
-    
+
         function updateRoomsByHall(hallId, selectedRoom) {
             return $.ajax({
                 url: '/get-rooms/',
                 data: { 'hall_id': hallId },
-                success: function(data) {
+                success: function (data) {
                     $('#room').empty();
                     $('#room').append($('<option>').text('---------').attr('value', ''));
-                    $.each(data, function(index, value) {
+                    $.each(data, function (index, value) {
                         var option = $('<option>').text(value.name).attr('value', value.id);
                         if (value.id == selectedRoom) {
                             option.attr('selected', 'selected');
@@ -449,15 +408,15 @@
                 }
             });
         }
-    
+
         function updateShelvesByBuilding(buildingId, selectedShelf) {
             return $.ajax({
                 url: '/get-shelves/',
                 data: { 'building_id': buildingId },
-                success: function(data) {
+                success: function (data) {
                     $('#shelf').empty();
                     $('#shelf').append($('<option>').text('---------').attr('value', ''));
-                    $.each(data, function(index, value) {
+                    $.each(data, function (index, value) {
                         var option = $('<option>').text(value.name).attr('value', value.id);
                         if (value.id == selectedShelf) {
                             option.attr('selected', 'selected');
@@ -467,15 +426,15 @@
                 }
             });
         }
-    
+
         function updateShelvesByRoom(roomId, selectedShelf) {
             return $.ajax({
                 url: '/get-shelves/',
                 data: { 'room_id': roomId },
-                success: function(data) {
+                success: function (data) {
                     $('#shelf').empty();
                     $('#shelf').append($('<option>').text('---------').attr('value', ''));
-                    $.each(data, function(index, value) {
+                    $.each(data, function (index, value) {
                         var option = $('<option>').text(value.name).attr('value', value.id);
                         if (value.id == selectedShelf) {
                             option.attr('selected', 'selected');
@@ -485,29 +444,70 @@
                 }
             });
         }
-    
-        $('#location').change(function() {
+
+        $('#location').change(function () {
             updateFields();
         });
-    
-        $('#building').change(function() {
+
+        $('#building').change(function () {
             updateFields();
         });
-    
-        $('#hall').change(function() {
+
+        $('#hall').change(function () {
             updateFields();
         });
-    
-        $('#room').change(function() {
+
+        $('#room').change(function () {
             updateFields();
         });
-    
+
         updateFields();
     });
-    </script>
+</script>
 
+<script>
+    function recomissionItens() {
+        table = document.getElementById("itens");
+        var itens = [];
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            // buscar id no input no data-productid
+            const id = row.cells[2].children[0].getAttribute("data-productid");
+            const quantity = row.cells[2].children[0].value;
+            const location = row.cells[3].children[0].value;
+            var item = {
+                "id": id,
+                "quantity": quantity,
+                "storageType": location
+            };
+            itens.push(item);
+        }
+        $.ajax({
+            type: 'POST',
+            url: '/recomissionar/',
+            data: {
+                "recomission": JSON.stringify(itens),
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function (response) {
+                if (response.success) {
+                    if (response.reload) {
+                        location.reload();
+                    }
+                } else {
+                    console.log(response.error);
+                }
+            },
+            error: function (xhr, errmsg, err) {
+                console.log(xhr.status + ": " + xhr.responseText);
+            },
+        });
+    }
+</script>
 
-
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
+    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"></script>
 {% endblock extra_scripts %}

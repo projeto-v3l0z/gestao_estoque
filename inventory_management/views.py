@@ -1,3 +1,4 @@
+import json
 from django.views.generic import TemplateView, ListView, DetailView, CreateView
 from django.http import JsonResponse
 from django.views import View
@@ -794,6 +795,11 @@ def delete_workspace(request, code):
     WorkSpace.objects.filter(user=request.user, product__code=code).delete()
     return HttpResponseRedirect(reverse('inventory_management:workspace'))
 
+def delete_workspace_write_off(request, code):
+    code = code.upper()
+    WorkSpace.objects.filter(user=request.user, product__code=code).delete()
+    return HttpResponseRedirect(reverse('inventory_management:workspace_write_off'))
+
 
 def get_building_properties(request):
     building_id = request.GET.get('building_id')
@@ -1076,3 +1082,42 @@ class ProductAutoComplete(View):
         results = [{"id": produto.id, "text": produto.name} for produto in produtos]
         return JsonResponse({"results": results})
     
+def recomission_product_units(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.POST.get("recomission", "[]"))  # Recebe os itens como JSON
+            if not data:
+                return JsonResponse({"success": False, "error": "Nenhum item recebido"}, status=400)
+
+            for item in data:
+                product_unit_id = item.get("id")
+                quantity = float(item.get("quantity", 0))
+                storage_type_id = item.get("storageType", "")
+
+                product_unit = get_object_or_404(ProductUnit, id=product_unit_id)
+                storage_type = get_object_or_404(StorageType, id=storage_type_id)
+                
+                product_unit.write_off = False
+                product_unit.weight_length = quantity
+                product_unit.location = storage_type
+                product_unit.save()
+
+                Write_off.objects.create(
+                    product_unit=product_unit,
+                    origin=storage_type,
+                    recomission_storage_type=storage_type,
+                    write_off_date=timezone.now(),
+                    observations="Recomissionamento de produto",
+                    storage_type=None,
+                    write_off_destination=None,
+                    created_by=request.user,
+                )
+
+            return JsonResponse({"success": True, "reload": True})
+
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "error": "Erro ao decodificar JSON"}, status=400)
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+    return JsonResponse({"success": False, "error": "Método não permitido"}, status=405)
