@@ -50,53 +50,53 @@
 </head>
 
 <body class="d-flex flex-column">
-
-<!-- ======= Header ======= -->
-<header id="header" class="mb-3">
-    <div class="container d-flex align-items-center justify-content-between">
-
-        <h1 class="navbar-brand logo"><a href="{% url 'inventory_management:index' %}">Gestão de Estoque</a></h1>
-        <!-- Uncomment below if you prefer to use an image logo -->
-        <!-- <a href="{% static 'OnePage/index.html' %}" class="logo"><img src="{% static 'OnePage/assets/img/logo.png' %}" alt="" class="img-fluid"></a>-->
-
-        <nav id="navbar" class="navbar">
-            <ul>
-                <li><a class="nav-link" href="{% url 'inventory_management:index' %}">Início</a></li>
-                <li><a class="nav-link" href="{% url 'inventory_management:about' %}">Sobre</a></li>
-                <li><a class="nav-link" href="{% url 'inventory_management:adresses' %}">Endereços</a></li>
-                <!-- <li class="dropdown"><a href="#"><span>Mais Opções</span> <i class="bi bi-chevron-down"></i></a>
-                    <ul>
-                        <li><a href="#">Drop Down 1</a></li>
-                        <li class="dropdown"><a href="#"><span>Deep Drop Down</span> <i class="bi bi-chevron-right"></i></a>
-                            <ul>
-                                <li><a href="#">Deep Drop Down 1</a></li>
-                                <li><a href="#">Deep Drop Down 2</a></li>
-                            </ul>
-                        </li>
-                        <li><a href="#">Drop Down 2</a></li>
+    <header id="header" class="mb-3">
+        <nav class="navbar bg-body-tertiary fixed-top">
+            <div class="container-fluid">
+              <a class="navbar-brand" href="#">Gestão de Estoque</a>
+              <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+              </button>
+              <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+                <div class="offcanvas-header">
+                  <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Menu</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                </div>
+                <div class="offcanvas-body">
+                    <ul class="navbar-nav">
+                        <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:index' %}">Início</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:about' %}">Sobre</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:adresses' %}">Endereços</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:scan_qr' %}">Escanear QR Code</a></li>
+                        {% if user|has_perm:"inventory_management.view_product" and user.is_authenticated %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:product_list' %}">Lista de Produtos</a></li>
+                        {% endif %}
+                        {% if user|has_perm:"inventory_management.view_productunit" and user.is_authenticated %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:product_unit_list' %}">Lista de Unidades</a></li>
+                        {% endif %}
+                        {% if user|has_perm:"inventory_management.add_product" and user.is_authenticated %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:product_unit_create' %}">Criar Unidade</a></li>
+                        {% endif %}
+                        {% if user|has_perm:"inventory_management.view_workspace" and user.is_authenticated %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:workspace' %}">Área de Trabalho Transferencias</a></li>
+                        {% endif %}
+                        {% if user|has_perm:"inventory_management.view_workspace" and user.is_authenticated %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:workspace_write_off' %}">Área de Trabalho Baixas</a></li>
+                        {% endif %}
+                        {% if user.is_staff and user|has_perm:"inventory_management.can_view_admin" %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'admin:index' %}">Administração</a></li>
+                        {% endif %}
+                        {% if not user.is_authenticated %}
+                            <li class="nav-item"><a class="nav-link getstarted" href="{% url 'admin:login' %}">Entrar</a></li>
+                        {% else %}
+                            <li class="nav-item"><a class="nav-link getstarted" href="{% url 'inventory_management:logout' %}">Sair</a></li>
+                        {% endif %}
                     </ul>
-                </li> -->
-
-                
-                <li><a class="nav-link" href="{% url 'inventory_management:scan_qr' %}">Escanear QR Code</a></li>
-                {% if user|has_perm:"inventory_management.view_workspace" and user.is_authenticated %}
-                    <li><a class="nav-link" href="{% url 'inventory_management:workspace' %}">Área de Trabalho</a></li>
-                {% endif %}
-                {% if user.is_staff and user|has_perm:"inventory_management.can_view_admin" %}
-                    <li><a class="nav-link" href="{% url 'admin:index' %}">Administração</a></li>
-                {% endif %}
-                {% if not user.is_authenticated %}
-                    <li><a class="getstarted" href="{% url 'admin:login' %}">Entrar</a></li>
-                    {% else %}
-                    <li><a class="getstarted" href="{% url 'inventory_management:logout' %}">Sair</a></li>
-                {% endif %}
-
-            </ul>
-            <i class="bi bi-list mobile-nav-toggle"></i>
-        </nav><!-- .navbar -->
-
-    </div>
-</header><!-- End Header -->
+                </div>
+              </div>
+            </div>
+          </nav>
+    </header>
 
 <main id="main">
     <div class="container">

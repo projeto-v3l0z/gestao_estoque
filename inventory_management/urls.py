@@ -6,6 +6,7 @@ app_name = 'inventory_management'
 urlpatterns = [
     path('', IndexView.as_view(), name='index'),
     path('produtos/', ProductListView.as_view(), name='product_list'),
+    path('unidades/', ProductUnitListView.as_view(), name='product_unit_list'),
     path('produto/<slug:slug>/', ProductDetailView.as_view(), name='product_detail'),
     path('produto/<slug:product_slug>/unidade/<slug:slug>/', ProductUnitDetailView.as_view(), name='product_unit_detail'),
     path('escanearQR/', ScanQRView.as_view(), name='scan_qr'),
@@ -15,6 +16,9 @@ urlpatterns = [
     path('get-product-location-shelf/<uuid:product_unit_id>/', GetProductLocationShelfView.as_view(), name='get_product_location_shelf'),  path('generate_qr_codes', views.generate_qr_codes, name='generate_qr_codes'),
     path('area_trabalho/', WorkSpaceView.as_view(), name='workspace'),
     path('area_trabalho/<str:code>/delete/', delete_workspace, name='delete_workspace'),
+    path('area-trabalho-baixado/', WorkSpaceWriteOffView.as_view(), name='workspace_write_off'),
+    path('area-trabalho-baixado/<str:code>/delete/', delete_workspace_write_off, name='delete_workspace_write_off'),
+      path('recomissionar/', recomission_product_units, name='recomission'),
     path('get-building-properties/', views.get_building_properties, name='get_building_properties'),
     path('get-rooms/', views.get_rooms, name='get_rooms'),
     path('get-halls/', views.get_halls, name='get_halls'),
@@ -27,4 +31,5 @@ urlpatterns = [
     
     path('product-unit/create/', ProductUnitCreateView.as_view(), name='product_unit_create'),
     # path('product-unit/update/<uuid:pk>/', ProductUnitUpdateView.as_view(), name='product_unit_update'),
+    path('product-autocomplete/', ProductAutoComplete.as_view(), name='product-autocomplete'),
 ]
