@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 {% load iam_tags static %}
+
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
@@ -14,8 +15,9 @@
     <link href="{% static 'OnePage/assets/img/apple-touch-icon.png' %}" rel="apple-touch-icon">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Raleway:300,300i,400,400i,500,500i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i"
-          rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Raleway:300,300i,400,400i,500,500i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i"
+        rel="stylesheet">
 
     <!-- Vendor CSS Files -->
     <link href="{% static 'OnePage/assets/vendor/aos/aos.css' %}" rel="stylesheet">
@@ -43,6 +45,19 @@
         main {
             flex: 1;
         }
+
+                /* Esconde o menu normal */
+        .navbar ul {
+            display: none;
+        }
+
+        /* Mantém o ícone do hambúrguer sempre visível */
+        .mobile-nav-toggle {
+            display: block;
+            font-size: 30px;
+            cursor: pointer;
+        }
+
     </style>
 
     {% block extra_styles %}
@@ -50,153 +65,158 @@
 </head>
 
 <body class="d-flex flex-column">
-    <header id="header" class="mb-3">
-        <nav class="navbar bg-body-tertiary fixed-top">
-            <div class="container-fluid">
-              <a class="navbar-brand" href="#">Gestão de Estoque</a>
-              <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-              </button>
-              <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
-                <div class="offcanvas-header">
-                  <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Menu</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-                </div>
-                <div class="offcanvas-body">
-                    <ul class="navbar-nav">
-                        <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:index' %}">Início</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:about' %}">Sobre</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:adresses' %}">Endereços</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:scan_qr' %}">Escanear QR Code</a></li>
-                        {% if user|has_perm:"inventory_management.view_product" and user.is_authenticated %}
-                            <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:product_list' %}">Lista de Produtos</a></li>
-                        {% endif %}
-                        {% if user|has_perm:"inventory_management.view_productunit" and user.is_authenticated %}
-                        <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:product_unit_list' %}">Lista de Unidades</a></li>
-                        {% endif %}
-                        {% if user|has_perm:"inventory_management.add_product" and user.is_authenticated %}
-                            <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:product_unit_create' %}">Criar Unidade</a></li>
-                        {% endif %}
-                        {% if user|has_perm:"inventory_management.view_workspace" and user.is_authenticated %}
-                            <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:workspace' %}">Área de Trabalho Transferencias</a></li>
-                        {% endif %}
-                        {% if user|has_perm:"inventory_management.view_workspace" and user.is_authenticated %}
-                            <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:workspace_write_off' %}">Área de Trabalho Baixas</a></li>
-                        {% endif %}
-                        {% if user.is_staff and user|has_perm:"inventory_management.can_view_admin" %}
-                            <li class="nav-item"><a class="nav-link" href="{% url 'admin:index' %}">Administração</a></li>
-                        {% endif %}
-                        {% if not user.is_authenticated %}
-                            <li class="nav-item"><a class="nav-link getstarted" href="{% url 'admin:login' %}">Entrar</a></li>
-                        {% else %}
-                            <li class="nav-item"><a class="nav-link getstarted" href="{% url 'inventory_management:logout' %}">Sair</a></li>
-                        {% endif %}
-                    </ul>
-                </div>
-              </div>
+        <header id="header" class="fixed-top d-flex align-items-center ">
+            <div class="container d-flex align-items-center justify-content-between">
+
+            <div class="logo">
+                <h1 class="text-light"><a href="index.html"><span>Gestão de Estoque</span></a></h1>
             </div>
-          </nav>
-    </header>
 
-<main id="main">
-    <div class="container">
-        {% block content %}{% endblock content %}
-    </div>
-</main><!-- End #main -->
+            <nav id="navbar" class="navbar">
+                <ul>
+                <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:index' %}">Início</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:about' %}">Sobre</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:adresses' %}">Endereços</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:scan_qr' %}">Escanear QR Code</a></li>
 
-<footer id="footer">
-    <div class="container d-md-flex py-4">
+                {% if user.is_authenticated %}
+                    {% if user|has_perm:"inventory_management.view_product" %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:product_list' %}">Lista de Produtos</a></li>
+                    {% endif %}
+                    {% if user|has_perm:"inventory_management.view_productunit" %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:product_unit_list' %}">Lista de Unidades</a></li>
+                    {% endif %}
+                    {% if user|has_perm:"inventory_management.add_product" %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:product_unit_create' %}">Criar Unidade</a></li>
+                    {% endif %}
+                    {% if user|has_perm:"inventory_management.view_workspace" %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:workspace' %}">Área de Transferências</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:workspace_write_off' %}">Área de Baixas</a></li>
+                    {% endif %}
+                    {% if user.is_staff and user|has_perm:"inventory_management.can_view_admin" %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'admin:index' %}">Administração</a></li>
+                    {% endif %}
+                    <li class="nav-item"><a class="nav-link getstarted" href="{% url 'inventory_management:logout' %}">Sair</a></li>
+                {% else %}
+                    <li class="nav-item"><a class="nav-link getstarted" href="{% url 'admin:login' %}">Entrar</a></li>
+                {% endif %}
+                </ul>
+                <i class="bi bi-list mobile-nav-toggle"></i>
+            </nav><!-- .navbar -->
 
-        <div class="me-md-auto text-center text-md-start">
-            <div class="copyright">
-                &copy; Direitos Autorais <strong><span> Projeto V3l0z</span></strong>. Todos os Direitos Reservados
             </div>
-            <div class="credits">
-                <!-- All the links in the footer should remain intact. -->
-                <!-- You can delete the links only if you purchased the pro version. -->
-                <!-- Licensing information: https://bootstrapmade.com/license/ -->
-                <!-- Purchase the pro version with working PHP/AJAX contact form: https://bootstrapmade.com/onepage-multipurpose-bootstrap-template/ -->
-                Design por <a href="https://bootstrapmade.com/">BootstrapMade</a>
+        </header><!-- End Header -->
+
+        <main id="main" style="padding-top: 80px;">
+        <div class="container">
+            {% block content %}{% endblock content %}
+        </div>
+        </main><!-- End #main -->
+
+    <footer id="footer">
+        <div class="container d-md-flex py-4">
+
+            <div class="me-md-auto text-center text-md-start">
+                <div class="copyright">
+                    &copy; Direitos Autorais <strong><span> Projeto V3l0z</span></strong>. Todos os Direitos Reservados
+                </div>
+                <div class="credits">
+                    <!-- All the links in the footer should remain intact. -->
+                    <!-- You can delete the links only if you purchased the pro version. -->
+                    <!-- Licensing information: https://bootstrapmade.com/license/ -->
+                    <!-- Purchase the pro version with working PHP/AJAX contact form: https://bootstrapmade.com/onepage-multipurpose-bootstrap-template/ -->
+                    Design por <a href="https://bootstrapmade.com/">BootstrapMade</a>
+                </div>
+            </div>
+            <div class="social-links text-center text-md-right pt-3 pt-md-0">
+                <a href="https://github.com/projeto-v3l0z" class="github"><i class="bi bi-github"></i></a>
+                <a href="https://v3l0z.com.br/" class="oficial-site"><i class="bi bi-link-45deg"></i></a>
             </div>
         </div>
-        <div class="social-links text-center text-md-right pt-3 pt-md-0">
-            <a href="https://github.com/projeto-v3l0z" class="github"><i class="bi bi-github"></i></a>
-            <a href="https://v3l0z.com.br/" class="oficial-site"><i class="bi bi-link-45deg"></i></a>
-        </div>
-    </div>
-</footer><!-- End Footer -->
+    </footer><!-- End Footer -->
 
-<div id="preloader"></div>
-<a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i
-        class="bi bi-arrow-up-short"></i></a>
+    <div id="preloader"></div>
+    <a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i
+            class="bi bi-arrow-up-short"></i></a>
 
-<!-- Vendor JS Files -->
+    <!-- Vendor JS Files -->
 
 
-<script src="{% static 'OnePage/assets/vendor/purecounter/purecounter_vanilla.js' %}"></script>
-<script src="{% static 'OnePage/assets/vendor/aos/aos.js' %}"></script>
-<script src="{% static 'OnePage/assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'OnePage/assets/vendor/glightbox/js/glightbox.min.js' %}"></script>
-<script src="{% static 'OnePage/assets/vendor/isotope-layout/isotope.pkgd.min.js' %}"></script>
-<script src="{% static 'OnePage/assets/vendor/swiper/swiper-bundle.min.js' %}"></script>
-<script src="{% static 'OnePage/assets/vendor/php-email-form/validate.js' %}"></script>
+    <script src="{% static 'OnePage/assets/vendor/purecounter/purecounter_vanilla.js' %}"></script>
+    <script src="{% static 'OnePage/assets/vendor/aos/aos.js' %}"></script>
+    <script src="{% static 'OnePage/assets/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'OnePage/assets/vendor/glightbox/js/glightbox.min.js' %}"></script>
+    <script src="{% static 'OnePage/assets/vendor/isotope-layout/isotope.pkgd.min.js' %}"></script>
+    <script src="{% static 'OnePage/assets/vendor/swiper/swiper-bundle.min.js' %}"></script>
+    <script src="{% static 'OnePage/assets/vendor/php-email-form/validate.js' %}"></script>
 
-<!-- Template Main JS File -->
-<script src="{% static 'OnePage/assets/js/main.js' %}"></script>
+    <!-- Template Main JS File -->
+    <script src="{% static 'OnePage/assets/js/main.js' %}"></script>
 
-{% block extra_scripts %}{% endblock extra_scripts %}
+    {% block extra_scripts %}{% endblock extra_scripts %}
 
-{% block extra_head %}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-      // Função para desabilitar os botões
-      function disableButtons() {
-          const buttons = document.querySelectorAll('button');
-          buttons.forEach(function(button) {
-              button.disabled = true;
-          });
-      }
-  
-      // Função para habilitar os botões
-      function enableButtons() {
-          const buttons = document.querySelectorAll('button');
-          buttons.forEach(function(button) {
-              button.disabled = false;
-          });
-      }
-  
-      // Limpar o estado de desabilitação ao recarregar ou voltar na navegação
-      window.addEventListener('pageshow', function(event) {
-          // Verifica se a navegação foi feita via cache (navegação 'voltar')
-          if (event.persisted) {
-              enableButtons();  // Garante que os botões serão habilitados
-          }
-      });
-  
-      // Desabilitar botões ao enviar o formulário
-      document.querySelectorAll('form').forEach(function(form) {
-          form.addEventListener('submit', function() {
-              disableButtons();
-          });
-      });
-  
-      // Desabilitar botões durante requisições AJAX
-      document.addEventListener('ajaxStart', function() {
-          disableButtons();
-      });
-  
-      document.addEventListener('ajaxStop', function() {
-          enableButtons();
-      });
-  
-      // Para lidar com navegação de página (recarregamento)
-      window.addEventListener('beforeunload', function () {
-          disableButtons();
-      });
-  });
-  
-</script>
-{% endblock %}
+    {% block extra_head %}
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+    const toggleButton = document.querySelector(".mobile-nav-toggle");
+    const navbarMenu = document.querySelector(".navbar ul");
+
+    toggleButton.addEventListener("click", function () {
+        navbarMenu.style.display = navbarMenu.style.display === "block" ? "none" : "block";
+    });
+});
+
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Função para desabilitar os botões
+            function disableButtons() {
+                const buttons = document.querySelectorAll('button');
+                buttons.forEach(function (button) {
+                    button.disabled = true;
+                });
+            }
+
+            // Função para habilitar os botões
+            function enableButtons() {
+                const buttons = document.querySelectorAll('button');
+                buttons.forEach(function (button) {
+                    button.disabled = false;
+                });
+            }
+
+            // Limpar o estado de desabilitação ao recarregar ou voltar na navegação
+            window.addEventListener('pageshow', function (event) {
+                // Verifica se a navegação foi feita via cache (navegação 'voltar')
+                if (event.persisted) {
+                    enableButtons();  // Garante que os botões serão habilitados
+                }
+            });
+
+            // Desabilitar botões ao enviar o formulário
+            document.querySelectorAll('form').forEach(function (form) {
+                form.addEventListener('submit', function () {
+                    disableButtons();
+                });
+            });
+
+            // Desabilitar botões durante requisições AJAX
+            document.addEventListener('ajaxStart', function () {
+                disableButtons();
+            });
+
+            document.addEventListener('ajaxStop', function () {
+                enableButtons();
+            });
+
+            // Para lidar com navegação de página (recarregamento)
+            window.addEventListener('beforeunload', function () {
+                disableButtons();
+            });
+        });
+
+    </script>
+    {% endblock %}
 
 </body>
 
