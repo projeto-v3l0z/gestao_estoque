@@ -479,7 +479,9 @@ def generate_qr_codes(request):
                     c.drawInlineImage(qr, x_coordinate, y_coordinate, width=qr_size, height=qr_size)
 
                     # Código do produto (abaixo do QR Code)
-                    product_code = item.code
+                    product_code1 = item.code1
+                    product_code2 = item.code2
+                    product_code = f"Código 1: {product_code1} - Código 2: {product_code2}"
                     text_width = c.stringWidth(product_code, "VeraBd", 9)
                     code_x = x_coordinate + (qr_size - text_width) / 2
                     c.drawString(code_x, y_coordinate - 15, product_code)
