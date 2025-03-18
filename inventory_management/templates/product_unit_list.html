@@ -11,20 +11,20 @@
     </div>
     {% endif %}
     <form id="filter_form" method="GET" action="">
-        <div class="row justify-content-center">
-            <div class="col-md-4">
+        <div class="row">
+            <div class="col-md-6 mb-3">
                 <div class="input-group">
                     <input type="text" class="form-control" id="code_search" name="code_search" value="{{ request.GET.code_search }}" placeholder="Pesquisar por Código">
                     <button type="submit" class="btn btn-primary">Buscar</button>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6 mb-3">
                 <div class="input-group">
                     <input type="text" class="form-control" id="name_search" name="name_search" value="{{ request.GET.name_search }}" placeholder="Pesquisar por Nome">
                     <button type="submit" class="btn btn-primary">Buscar</button>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6 mb-3">
                 <div class="input-group">
                     <select name="location" id="location" class="form-select">
                         <option value="">Filtrar por Localização</option>
@@ -47,6 +47,7 @@
                         <th>Código</th>
                         <th>Produto</th>
                         <th>Quantidade</th>
+                        <th>Baixado</th>
                         <th>Localização</th>
                         <th>Metro</th>
                         <th>Detalhes</th>
@@ -58,7 +59,13 @@
                         <td>{{ unit.code }}</td>
                         <td>{{ unit.product.name|title }}</td>
                         <td>{{ unit.quantity }}</td>
+                        {% if unit.write_off %}
+                        <td>Sim</td>
+                        <td>-</td>
+                        {% else %}
+                        <td>Não</td>
                         <td>{{ unit.location.name }}</td>
+                        {% endif %}
                         <td>{{ unit.weight_length|default:"0.00" }}</td>
                         <td>
                             <a href="{% url 'inventory_management:product_unit_detail' unit.product.slug unit.slug %}" class="btn btn-info btn-sm">Ver Detalhes</a>
