@@ -21,7 +21,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.shortcuts import get_object_or_404
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -92,13 +92,6 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
         if shelf_id:
             product_units = product_units.filter(shelf__id=shelf_id)
 
-        if write_off == 'baixados':
-            product_units = product_units.filter(write_off=True)
-        elif write_off == 'todos':
-            pass
-        else:
-            product_units = product_units.filter(write_off=False)
-
         paginator = Paginator(product_units, 8)
         page = self.request.GET.get('page')
         try:
@@ -127,7 +120,7 @@ class ProductUnitDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['storage_types'] = StorageType.objects.exclude(name__icontains=["Baixa", "Conferência"])
+        context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa"])
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
         context['halls'] = Hall.objects.all()
@@ -340,6 +333,7 @@ class ProductUnitCreateView(PermissionRequiredMixin, CreateView):
     template_name = 'product_unit/form.html'   
     form_class = ProductUnitForm
     permission_required = 'inventory_management.add_productunit'
+    success_url = reverse_lazy('inventory_management:product_unit_list')
     
 
 class ScanQRView(TemplateView):
@@ -528,7 +522,7 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
         context['can_transfer'] = self.request.user.has_perm('inventory_management.add_stocktransfer')
         context['can_write_off'] = self.request.user.has_perm('inventory_management.add_write_off')
         context['write_off_destinations'] = WriteOffDestinations.objects.all()
-        context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa", "Conferência"])
+        context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa"])
         context['shelves'] = Shelf.objects.all()
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
@@ -1065,13 +1059,13 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(product__name__icontains=name_search)
 
         if location_id:
-            queryset = queryset.filter(location__id=location_id)
+            queryset = queryset.filter(location__id=location_id).filter(write_off=False)
 
         return queryset.order_by('code')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['locations'] = StorageType.objects.all()
+        context['locations'] = StorageType.objects.exclude(name__in=["Baixa"])
         return context
 
 def create_product_unit(request):
@@ -1106,7 +1100,6 @@ def recomission_product_units(request):
                 storage_type = get_object_or_404(StorageType, id=storage_type_id)
                 
                 product_unit.write_off = False
-                product_unit.weight_length = quantity
                 product_unit.location = storage_type
                 product_unit.save()
 
@@ -1121,6 +1114,12 @@ def recomission_product_units(request):
                     created_by=request.user,
                 )
 
+                ClothConsumption.objects.create(
+                    product_unit=product_unit,
+                    remainder=quantity
+                )
+
+            WorkSpace.objects.filter(user=request.user).delete()
             return JsonResponse({"success": True, "reload": True})
 
         except json.JSONDecodeError:

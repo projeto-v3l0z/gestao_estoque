@@ -569,4 +569,7 @@ class WorkSpace(models.Model):
     class Meta:
         verbose_name_plural = "Áreas de Trabalho"
         verbose_name = "Área de Trabalho"
+        permissions = [
+            ("can_view_workspace_write_off", "Can view workspace write off"),
+        ]
     
