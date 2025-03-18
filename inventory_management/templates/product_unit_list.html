@@ -1,8 +1,15 @@
 {% extends "base.html" %}
-
+{% load iam_tags static %}
 {% block content %}
 <div class="container py-3">
     <h1 class="text-center">Lista de Unidades de Produto</h1>
+    {% if user|has_perm:"inventory_management.add_productunit" %}
+    <div class="row justify-content-center mb-3">
+        <div class="col-12">
+            <a href="{% url 'inventory_management:product_unit_create' %}" class="btn btn-primary">Adicionar Unidade de Produto</a>
+        </div>
+    </div>
+    {% endif %}
     <form id="filter_form" method="GET" action="">
         <div class="row justify-content-center">
             <div class="col-md-4">

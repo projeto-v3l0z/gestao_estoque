@@ -21,7 +21,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.shortcuts import get_object_or_404
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -91,13 +91,6 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
             product_units = product_units.filter(hall__id=hall_id)
         if shelf_id:
             product_units = product_units.filter(shelf__id=shelf_id)
-
-        if write_off == 'baixados':
-            product_units = product_units.filter(write_off=True)
-        elif write_off == 'todos':
-            pass
-        else:
-            product_units = product_units.filter(write_off=False)
 
         paginator = Paginator(product_units, 8)
         page = self.request.GET.get('page')
@@ -340,6 +333,7 @@ class ProductUnitCreateView(PermissionRequiredMixin, CreateView):
     template_name = 'product_unit/form.html'   
     form_class = ProductUnitForm
     permission_required = 'inventory_management.add_productunit'
+    success_url = reverse_lazy('inventory_management:product_unit_list')
     
 
 class ScanQRView(TemplateView):
@@ -1120,7 +1114,8 @@ def recomission_product_units(request):
                     write_off_destination=None,
                     created_by=request.user,
                 )
-
+            
+            WorkSpace.objects.filter(user=request.user).delete()
             return JsonResponse({"success": True, "reload": True})
 
         except json.JSONDecodeError:

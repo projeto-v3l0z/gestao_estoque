@@ -20,6 +20,7 @@
                 </tr>
             </thead>
             <tbody>
+                <form id="recomission" method="post" action="">
                 {% for workspace in object_list %}
                 <tr>
                     <td>{{ workspace.product.product|title }}</td>
@@ -50,6 +51,7 @@
                     <td colspan="3">Nenhum produto na área de trabalho.</td>
                 </tr>
                 {% endfor %}
+                </form>
             </tbody>
         </table>
         <div class="col-12 g-3">
@@ -469,6 +471,11 @@
     function recomissionItens() {
         table = document.getElementById("itens");
         var itens = [];
+        form = document.getElementById("recomission");
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
         for (var i = 1, row; row = table.rows[i]; i++) {
             // buscar id no input no data-productid
             const id = row.cells[2].children[0].getAttribute("data-productid");
