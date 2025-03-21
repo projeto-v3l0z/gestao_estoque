@@ -46,4 +46,21 @@ class ProductUnitForm(forms.ModelForm):
             'incoming': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Entrada'}),
         }
 
+class CreateProductForm(forms.ModelForm):
 
+    class Meta:
+        model = Product
+        exclude =  ['']
+        widgets = {
+            'name' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'nome'}),
+            'description' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'descriçao'}),
+            'price' : forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'preço' }),
+            'measure' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'medida' }),
+            'width' : forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'largura'}),
+            'composition' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'composiçao'}),
+             'image': forms.ClearableFileInput(attrs={'class': 'form-control', 'placeholder': 'imagem'}),
+            'ncm' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ncm'}),
+            'code1' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'codigo1'}),
+            'code2' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'codigo2'}),
+        }
+        

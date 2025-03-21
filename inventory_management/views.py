@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.views import View
 from .models import *
 from django.shortcuts import redirect
-from .forms import ProductUnitForm, QRCodeForm
+from .forms import ProductUnitForm, QRCodeForm, CreateProductForm
 from django.http import HttpResponse
 import qrcode
 from reportlab.pdfgen import canvas
@@ -334,7 +334,13 @@ class ProductUnitCreateView(PermissionRequiredMixin, CreateView):
     form_class = ProductUnitForm
     permission_required = 'inventory_management.add_productunit'
     success_url = reverse_lazy('inventory_management:product_unit_list')
-    
+
+class CreateProductView(PermissionRequiredMixin, CreateView):
+    model = Product
+    template_name = 'create_product.html'
+    form_class =CreateProductForm
+    permission_required = 'inventory_management.add_createproduct'
+    success_url = reverse_lazy('inventory_management:create_product')    
 
 class ScanQRView(TemplateView):
     template_name = 'scan_qr.html'
