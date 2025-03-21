@@ -71,6 +71,8 @@ class Product(models.Model):
     image = models.ImageField("Imagem", upload_to='product_images', blank=True, null=True)
     ncm = models.CharField("NCM", max_length=8, null=True, blank=True)
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
+    code1 = models.CharField("Código 1", max_length=100, blank=True, null=True)
+    code2 = models.CharField("Código 2", max_length=100, blank=True, null=True)
     color = models.ForeignKey('inventory_management.Color', on_delete=models.CASCADE, verbose_name="Cor", blank=True, null=True, editable=False)
     pattern = models.ForeignKey('inventory_management.Pattern', on_delete=models.CASCADE, verbose_name="Estampa", blank=True, null=True, editable=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name=_('Criado por'), on_delete=models.CASCADE, related_name='product_created_by', null=True, editable=False)
@@ -567,4 +569,7 @@ class WorkSpace(models.Model):
     class Meta:
         verbose_name_plural = "Áreas de Trabalho"
         verbose_name = "Área de Trabalho"
+        permissions = [
+            ("can_view_workspace_write_off", "Can view workspace write off"),
+        ]
     
