@@ -18,49 +18,55 @@
 
 <div class="container py-3">
   <div class="card p-4">
-    <form method="POST" action="">
+    <form method="POST" enctype="multipart/form-data">
       {% csrf_token %}
       <div class="row">
         <div class="col-md-6 mb-3">
-          <label for="{{ form.create_product }}">Produto</label>
+          <label for="{{ form.name.id_for_label }}">Produto</label>
           {{ form.name }}
         </div>
         <div class="col-md-6 mb-3">
-          {{ form.description.label }} {{ form.description }}
+          {{ form.description.label_tag }} 
+          {{ form.description }}
         </div>
         <div class="col-md-6 mb-3">
-          {{ form.price.label }} {{ form.price }}
+          {{ form.price.label_tag }} 
+          {{ form.price }}
         </div>
         <div class="col-md-6 mb-3">
-          {{ form.measure.label }} {{ form.measure }}
+          {{ form.measure.label_tag }} 
+          {{ form.measure }}
         </div>
         <div class="col-md-6 mb-3">
-          {{ form.width.label }} {{ form.width }}
-        </div>
-        </div>
-        <div class="col-md-6 mb-3">
-          {{ form.composition.label }} {{ form.composition }}
-        </div>
+          {{ form.width.label_tag }} 
+          {{ form.width }}
         </div>
         <div class="col-md-6 mb-3">
-          {{ form.image.label }} {{ form.image }}
-        </div>
-        </div>
-        <div class="col-md-6 mb-3">
-          {{ form.ncm.label }} {{ form.ncm }}
-        </div>
+          {{ form.composition.label_tag }} 
+          {{ form.composition }}
         </div>
         <div class="col-md-6 mb-3">
-          {{ form.code1.label }} {{ form.code1 }}
+          {{ form.image.label_tag }} 
+          {{ form.image }}
         </div>
         <div class="col-md-6 mb-3">
-            {{ form.code2.label }} {{ form.code2 }}
-          </div>
+          {{ form.ncm.label_tag }} 
+          {{ form.ncm }}
+        </div>
+        <div class="col-md-6 mb-3">
+          {{ form.code1.label_tag }} 
+          {{ form.code1 }}
+        </div>
+        <div class="col-md-6 mb-3">
+          {{ form.code2.label_tag }} 
+          {{ form.code2 }}
+        </div>
       </div>
       <button type="submit" class="btn btn-primary">Salvar</button>
     </form>
   </div>
 </div>
+
 {% endblock %}
 
 {% block extra_scripts %}
