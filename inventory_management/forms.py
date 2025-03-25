@@ -47,20 +47,19 @@ class ProductUnitForm(forms.ModelForm):
         }
 
 class CreateProductForm(forms.ModelForm):
-
     class Meta:
         model = Product
-        exclude =  ['']
+        exclude = ['color','color_id','created_by','created_at','update_by','update_at','created_by_id','id','productunit','slug','updated_by_id','pattern','patternn_id']
         widgets = {
-            'name' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'nome'}),
-            'description' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'descriçao'}),
-            'price' : forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'preço' }),
-            'measure' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'medida' }),
-            'width' : forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'largura'}),
-            'composition' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'composiçao'}),
-             'image': forms.ClearableFileInput(attrs={'class': 'form-control', 'placeholder': 'imagem'}),
-            'ncm' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ncm'}),
-            'code1' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'codigo1'}),
-            'code2' : forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'codigo2'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'nome'}),
+            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'descrição'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'preço'}),
+            'measure': forms.Select(choices=Product.MEASURE_CHOICES, attrs={'class': 'form-control', 'placeholder': 'medida'}),
+            'width': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'largura'}),
+            'composition': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'composição'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control', 'placeholder': 'imagem'}),
+            'ncm': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ncm'}),
+            'code1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'código 1'}),
+            'code2': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'código 2'}),
         }
         

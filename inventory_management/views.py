@@ -1,8 +1,9 @@
 import json
-from django.views.generic import TemplateView, ListView, DetailView, CreateView
+from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView
 from django.http import JsonResponse
 from django.views import View
 from .models import *
+from .models import Product
 from django.shortcuts import redirect
 from .forms import ProductUnitForm, QRCodeForm, CreateProductForm
 from django.http import HttpResponse
@@ -340,7 +341,36 @@ class CreateProductView(PermissionRequiredMixin, CreateView):
     template_name = 'create_product.html'
     form_class =CreateProductForm
     permission_required = 'inventory_management.add_createproduct'
-    success_url = reverse_lazy('inventory_management:create_product')    
+    success_url = reverse_lazy('inventory_management:product_list')    
+
+class ProductUpdateView(UpdateView):
+    model = Product
+    form_class = CreateProductForm
+    template_name = 'edit_product.html'
+
+    def get_object(self, queryset=None):
+        product_id = self.kwargs.get('product_id')
+        return get_object_or_404(Product, id=product_id)
+
+    def form_valid(self, form):
+        # Salvando o produto com os novos dados
+        product = form.save()
+
+        # Atualizando os filhos do produto (se houver)
+        filhos = Product.objects.filter(name=product.name)
+        for filho in filhos:
+            filho.price = product.price  # Atualiza o preço dos filhos com o novo preço do produto pai
+            filho.save()
+
+        # Redireciona para a página de detalhes do produto após a edição
+        return redirect('inventory_management:product_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['product'] = self.get_object()  # Adiciona o produto ao contexto
+        return context
+
+    
 
 class ScanQRView(TemplateView):
     template_name = 'scan_qr.html'
