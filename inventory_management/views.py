@@ -5,7 +5,7 @@ from django.views import View
 from .models import *
 from .models import Product
 from django.shortcuts import redirect
-from .forms import ProductUnitForm, QRCodeForm, CreateProductForm
+from .forms import ProductUnitForm, QRCodeForm, ProductCreateForm
 from django.http import HttpResponse
 import qrcode
 from reportlab.pdfgen import canvas
@@ -336,17 +336,17 @@ class ProductUnitCreateView(PermissionRequiredMixin, CreateView):
     permission_required = 'inventory_management.add_productunit'
     success_url = reverse_lazy('inventory_management:product_unit_list')
 
-class CreateProductView(PermissionRequiredMixin, CreateView):
+class ProductCreateView(PermissionRequiredMixin, CreateView):
     model = Product
-    template_name = 'create_product.html'
-    form_class =CreateProductForm
-    permission_required = 'inventory_management.add_createproduct'
+    template_name = 'product_create.html'
+    form_class =ProductCreateForm
+    permission_required = 'inventory_management.add_product_create'
     success_url = reverse_lazy('inventory_management:product_list')    
 
 class ProductUpdateView(UpdateView):
     model = Product
-    form_class = CreateProductForm
-    template_name = 'edit_product.html'
+    form_class = ProductCreateForm
+    template_name = 'product_edit.html'
 
     def get_object(self, queryset=None):
         product_id = self.kwargs.get('product_id')
@@ -355,12 +355,6 @@ class ProductUpdateView(UpdateView):
     def form_valid(self, form):
         # Salvando o produto com os novos dados
         product = form.save()
-
-        # Atualizando os filhos do produto (se houver)
-        filhos = Product.objects.filter(name=product.name)
-        for filho in filhos:
-            filho.price = product.price  # Atualiza o preço dos filhos com o novo preço do produto pai
-            filho.save()
 
         # Redireciona para a página de detalhes do produto após a edição
         return redirect('inventory_management:product_list')

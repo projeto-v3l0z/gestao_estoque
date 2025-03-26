@@ -46,7 +46,7 @@ class ProductUnitForm(forms.ModelForm):
             'incoming': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Entrada'}),
         }
 
-class CreateProductForm(forms.ModelForm):
+class ProductCreateForm(forms.ModelForm):
     class Meta:
         model = Product
         exclude = ['color','color_id','created_by','created_at','update_by','update_at','created_by_id','id','productunit','slug','updated_by_id','pattern','patternn_id']

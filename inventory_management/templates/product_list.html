@@ -4,13 +4,13 @@
 <div class="container py-3">
     <div class="position-relative">
         <h1 class="text-center">Produtos</h1>
-        <a href="{% url 'inventory_management:create_product' %}" class="btn btn-success position-absolute top-0 end-0">Adicionar Produto</a>
+        <a href="{% url 'inventory_management:product_create' %}" class="btn btn-success position-absolute top-0 end-0">Adicionar Produto</a>
     </div>
     <form id="filter_form" method="GET" action="">
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-6">
                 <div class="input-group">
-                    <input type="text" class="form-control" id="search" naame="search" placeholder="Pesquisar Produto">
+                    <input type="text" class="form-control" id="search" name="search" placeholder="Pesquisar Produto">
                     <button type="submit" class="btn btn-primary">Buscar</button>
                 </div>
             </div>
@@ -39,7 +39,7 @@
                         <td>{{ product.quantity }}</td>
                         <td>
                             <a href="{% url 'inventory_management:product_detail' product.slug %}" class="btn btn-info btn-sm">Ver Detalhes</a>
-                            <a href="{% url 'inventory_management:edit_product' product.id %}" class="btn btn-warning btn-sm ml-2">Editar</a>
+                            <a href="{% url 'inventory_management:product_edit' product.id %}" class="btn btn-warning btn-sm ml-2">Editar</a>
                         </td>
                     </tr>
                     {% empty %}
