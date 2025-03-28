@@ -7,6 +7,7 @@ from django.conf import settings
 import uuid
 from django.db.models import Sum, F, FloatField, Max
 from decimal import Decimal, ROUND_HALF_UP
+from itertools import count
 
 class Color(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -70,6 +71,8 @@ class Product(models.Model):
     image = models.ImageField("Imagem", upload_to='product_images', blank=True, null=True)
     ncm = models.CharField("NCM", max_length=8, null=True, blank=True)
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
+    code1 = models.CharField("Código 1", max_length=100, blank=True, null=True)
+    code2 = models.CharField("Código 2", max_length=100, blank=True, null=True)
     color = models.ForeignKey('inventory_management.Color', on_delete=models.CASCADE, verbose_name="Cor", blank=True, null=True, editable=False)
     pattern = models.ForeignKey('inventory_management.Pattern', on_delete=models.CASCADE, verbose_name="Estampa", blank=True, null=True, editable=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name=_('Criado por'), on_delete=models.CASCADE, related_name='product_created_by', null=True, editable=False)
@@ -150,20 +153,16 @@ class ProductUnit(models.Model):
                 self.generate_code()
 
             if not self.slug:
-                self.slug = slugify(f"{self.code}")
+                self.slug = slugify(self.code)
 
             if self.product.measure == 'u':
                 self.weight_length = 1
 
-            super(ProductUnit, self).save(*args, **kwargs)
-
-            if not self.slug:
-                self.slug = slugify(f"{self.product.id}")
-                super(ProductUnit, self).save(update_fields=['slug'])
+            super().save(*args, **kwargs)  # Salva o objeto antes de criar os outros
 
             if self.quantity > 1:
-                for i in range(1, self.quantity):
-                    new_unit = ProductUnit.objects.create(
+                for _ in range(1, self.quantity):  # Gera novas unidades corretamente
+                    new_unit = ProductUnit(
                         product=self.product,
                         location=self.location,
                         purchase_date=self.purchase_date,
@@ -176,13 +175,13 @@ class ProductUnit(models.Model):
                         hall=self.hall,
                         room=self.room,
                         shelf=self.shelf,
-                        quantity=1
+                        quantity=1  # As novas unidades sempre terão quantidade 1
                     )
-                    new_unit.generate_code()
-                    new_unit.slug = slugify(f"{new_unit.code}")
-                    new_unit.save()
+                    new_unit.save()  # Chama `save()`, que gera o código automaticamente
 
+            # Atualiza o objeto original para garantir que quantity=1
             self.__class__.objects.filter(id=self.id).update(quantity=1)
+
 
     def clean(self):
         if self.quantity < 1:
@@ -192,21 +191,28 @@ class ProductUnit(models.Model):
         if self.product.measure != 'u' and not self.weight_length:
             raise ValidationError("O peso/tamanho é obrigatório.")
 
+    
     def generate_code(self):
-        last_unit = ProductUnit.objects.aggregate(Max('code'))
-        last_code = last_unit['code__max']
+        existing_codes = (
+            ProductUnit.objects
+            .filter(code__startswith="PRD-")
+            .values_list('code', flat=True)
+        )
 
-        if last_code:
-            last_number = int(last_code.split('-')[1]) 
-        else:
-            last_number = 0
+        # Extrai os números dos códigos existentes e os converte em inteiros
+        existing_numbers = sorted(
+            int(code.split('-')[1]) for code in existing_codes if code.split('-')[1].isdigit()
+        )
 
-        new_number = last_number + 1
-        self.code = f"PRD-{new_number}"
-
-        while ProductUnit.objects.filter(code=self.code).exists():
+        # Busca o menor número disponível corretamente
+        new_number = 1
+        for num in existing_numbers:
+            if num != new_number:
+                break
             new_number += 1
-            self.code = f"PRD-{new_number}"
+
+        # Garante que o código gerado tenha dois dígitos (PRD-01, PRD-02...)
+        self.code = f"PRD-{new_number:02d}"
     
     def __str__(self):
         return self.product.name + " - " + self.code
@@ -563,4 +569,7 @@ class WorkSpace(models.Model):
     class Meta:
         verbose_name_plural = "Áreas de Trabalho"
         verbose_name = "Área de Trabalho"
+        permissions = [
+            ("can_view_workspace_write_off", "Can view workspace write off"),
+        ]
     

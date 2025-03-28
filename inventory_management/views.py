@@ -1,3 +1,4 @@
+import json
 from django.views.generic import TemplateView, ListView, DetailView, CreateView
 from django.http import JsonResponse
 from django.views import View
@@ -20,7 +21,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.http import HttpResponseRedirect
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.shortcuts import get_object_or_404
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -31,7 +32,7 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from reportlab.lib.utils import simpleSplit
 from django.contrib.auth import logout
 from django.db.models import Q
-
+from django_select2.views import AutoResponseView
 
 
 class IndexView(LoginRequiredMixin, TemplateView):
@@ -47,9 +48,11 @@ class ProductListView(PermissionRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        search = self.request.GET.get('search')
+        search = self.request.GET.get('search', '').strip()
+        
         if search:
             queryset = queryset.filter(name__icontains=search.lower())
+            
         return queryset.order_by('name')
 
 
@@ -89,13 +92,6 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
         if shelf_id:
             product_units = product_units.filter(shelf__id=shelf_id)
 
-        if write_off == 'baixados':
-            product_units = product_units.filter(write_off=True)
-        elif write_off == 'todos':
-            pass
-        else:
-            product_units = product_units.filter(write_off=False)
-
         paginator = Paginator(product_units, 8)
         page = self.request.GET.get('page')
         try:
@@ -124,7 +120,7 @@ class ProductUnitDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['storage_types'] = StorageType.objects.exclude(name__icontains=["Baixa", "Conferência"])
+        context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa"])
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
         context['halls'] = Hall.objects.all()
@@ -337,6 +333,7 @@ class ProductUnitCreateView(PermissionRequiredMixin, CreateView):
     template_name = 'product_unit/form.html'   
     form_class = ProductUnitForm
     permission_required = 'inventory_management.add_productunit'
+    success_url = reverse_lazy('inventory_management:product_unit_list')
     
 
 class ScanQRView(TemplateView):
@@ -476,10 +473,18 @@ def generate_qr_codes(request):
                     c.drawInlineImage(qr, x_coordinate, y_coordinate, width=qr_size, height=qr_size)
 
                     # Código do produto (abaixo do QR Code)
-                    product_code = item.code
-                    text_width = c.stringWidth(product_code, "VeraBd", 9)
-                    code_x = x_coordinate + (qr_size - text_width) / 2
-                    c.drawString(code_x, y_coordinate - 15, product_code)
+                    product_code1 = item.product.code1
+                    product_code2 = item.product.code2
+                    if product_code1:
+                        product_code = f"Código 1: {product_code1}"
+                        text_width = c.stringWidth(product_code, "VeraBd", 9)
+                        code_x = x_coordinate + (qr_size - text_width) / 2
+                        c.drawString(code_x, y_coordinate - 15, product_code)
+                    if product_code2:
+                        product_code = f"Código 2: {product_code2}"
+                        text_width = c.stringWidth(product_code, "VeraBd", 9)
+                        code_x = x_coordinate + (qr_size - text_width) / 2
+                        c.drawString(code_x, y_coordinate - 25, product_code)
 
                 c.showPage()
                 c.save()
@@ -501,6 +506,148 @@ def get_qr_size(size_preset):
     elif size_preset == 'grande':
         return 200
 
+
+@method_decorator(login_required, name='dispatch')
+class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
+    template_name = 'workspace_write_off.html'
+    model = WorkSpace
+    permission_required = 'inventory_management.view_workspace'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(user=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['can_transfer'] = self.request.user.has_perm('inventory_management.add_stocktransfer')
+        context['can_write_off'] = self.request.user.has_perm('inventory_management.add_write_off')
+        context['write_off_destinations'] = WriteOffDestinations.objects.all()
+        context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa"])
+        context['shelves'] = Shelf.objects.all()
+        context['buildings'] = Building.objects.all()
+        context['rooms'] = Rooms.objects.all()
+        context['halls'] = Hall.objects.all()
+        context['product_count'] = WorkSpace.objects.filter(user=self.request.user).count()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        try:
+            print("POST data:", request.POST)  # Debug: Print the POST data
+
+            if 'clean' in request.POST:
+                print("Cleaning workspace")
+                WorkSpace.objects.filter(user=request.user).delete()
+                return JsonResponse({'success': 'Produtos removidos com sucesso', 'reload': True}, status=200)
+
+            product_id = request.POST.get('product_id')
+            remove = request.POST.get('remove')
+            write_off_destination_id = request.POST.get('write_off_destination')
+
+            if write_off_destination_id:
+                print("Processing write off")
+                write_off_destination = get_object_or_404(WriteOffDestinations, pk=write_off_destination_id)
+                for product in WorkSpace.objects.filter(user=request.user):
+                    product_unit = product.product
+                    product_unit.write_off = True
+                    product_unit.save()
+
+                    origin = product_unit.shelf if product_unit.shelf else product_unit.location
+                    Write_off.objects.create(
+                        product_unit=product_unit,
+                        origin=origin,
+                        storage_type=StorageType.objects.get_or_create(name="Baixa")[0],
+                        write_off_date=timezone.now(),
+                        observations="Baixa de produto",
+                        write_off_destination=write_off_destination,
+                        created_by=request.user,
+                    )
+
+                WorkSpace.objects.filter(user=request.user).delete()
+                return JsonResponse({'success': 'Produtos baixados com sucesso', 'reload': True}, status=200)
+
+            if remove:
+                print("Removing product from workspace")
+                workspace_item = get_object_or_404(WorkSpace, user=request.user, product__code=remove)
+                workspace_item.delete()
+                return JsonResponse({'success': 'Produto removido da área de trabalho', 'reload': True}, status=200)
+
+            if product_id:
+                product = get_object_or_404(ProductUnit, code=product_id.upper())
+                if WorkSpace.objects.filter(user=request.user, product=product).exists():
+                    return JsonResponse({'error': 'Produto já está na sua área de trabalho', 'reload': True}, status=400)
+                if product.write_off is False:
+                    return JsonResponse({'error': 'Esse produto não está baixado', 'reload': True}, status=400)
+
+                WorkSpace.objects.create(user=request.user, product=product)
+                return JsonResponse({'success': 'Produto adicionado à área de trabalho', 'reload': True}, status=200)
+
+            if request.POST.get('transfer') is not None:
+                location_id = request.POST.get('location')
+                if not location_id or location_id == "None":
+                    return JsonResponse({'error': 'ID de localização inválido'}, status=400)
+
+                destination = get_object_or_404(StorageType, id=location_id)
+
+                building_id = request.POST.get('building')
+                building = Building.objects.filter(pk=building_id).first() if building_id else None
+
+                room_id = request.POST.get('room')
+                room = Rooms.objects.filter(pk=room_id).first() if room_id else None
+
+                hall_id = request.POST.get('hall')
+                hall = Hall.objects.filter(pk=hall_id).first() if hall_id else None
+
+                shelf_id = request.POST.get('shelf')
+                shelf = Shelf.objects.filter(pk=shelf_id).first() if shelf_id else None
+
+                observations = request.POST.get('observations', '')
+
+                for product in WorkSpace.objects.filter(user=request.user):
+                    product_unit = product.product
+
+                    StockTransfer.objects.create(
+                        product_unit=product_unit,
+                        origin_storage_type=product_unit.location,
+                        origin_building=product_unit.building,
+                        origin_hall=product_unit.hall,
+                        origin_room=product_unit.room,
+                        origin_shelf=product_unit.shelf,
+                        destination_storage_type=destination,
+                        destination_shelf=shelf,
+                        destination_building=building,
+                        destination_room=room,
+                        destination_hall=hall,
+                        transfer_date=timezone.now(),
+                        observations=observations,
+                        created_by=request.user,
+                    )
+
+                    product_unit.location = destination
+
+                    if destination.is_store:
+                        product_unit.building_id = building
+                        product_unit.room_id = room
+                        product_unit.hall_id = hall
+                        product_unit.shelf_id = shelf
+                    else:
+                        product_unit.building_id = None
+                        product_unit.room_id = None
+                        product_unit.hall_id = None
+                        product_unit.shelf_id = None
+
+                    product_unit.save()
+
+                WorkSpace.objects.filter(user=request.user).delete()
+                return JsonResponse({'success': 'Produtos transferidos com sucesso', 'transfer': True, 'reload': True}, status=200)
+            else:
+                print("Transfer button not pressed")
+
+        except Exception as e:
+            print("Exception occurred:", str(e))  # Debug: Print the exception
+            return JsonResponse({'error': str(e)}, status=400)
+
+        print("Invalid action")  # Debug: Indicate invalid action
+        return JsonResponse({'error': 'Ação inválida'}, status=400)
 
 @method_decorator(login_required, name='dispatch')
 class WorkSpaceView(PermissionRequiredMixin ,ListView):
@@ -649,6 +796,11 @@ def delete_workspace(request, code):
     code = code.upper()
     WorkSpace.objects.filter(user=request.user, product__code=code).delete()
     return HttpResponseRedirect(reverse('inventory_management:workspace'))
+
+def delete_workspace_write_off(request, code):
+    code = code.upper()
+    WorkSpace.objects.filter(user=request.user, product__code=code).delete()
+    return HttpResponseRedirect(reverse('inventory_management:workspace_write_off'))
 
 
 def get_building_properties(request):
@@ -907,13 +1059,13 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(product__name__icontains=name_search)
 
         if location_id:
-            queryset = queryset.filter(location__id=location_id)
+            queryset = queryset.filter(location__id=location_id).filter(write_off=False)
 
         return queryset.order_by('code')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['locations'] = StorageType.objects.all()
+        context['locations'] = StorageType.objects.exclude(name__in=["Baixa"])
         return context
 
 def create_product_unit(request):
@@ -924,3 +1076,55 @@ def create_product_unit(request):
             
             product_unit.save()
             
+
+class ProductAutoComplete(View):
+    def get(self, request, *args, **kwargs):
+        term = request.GET.get("term", "").strip()  # Captura a busca digitada no Select2
+        produtos = Product.objects.filter(name__icontains=term)[:10]  # Busca limitada a 10 resultados
+        results = [{"id": produto.id, "text": produto.name} for produto in produtos]
+        return JsonResponse({"results": results})
+    
+def recomission_product_units(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.POST.get("recomission", "[]"))  # Recebe os itens como JSON
+            if not data:
+                return JsonResponse({"success": False, "error": "Nenhum item recebido"}, status=400)
+
+            for item in data:
+                product_unit_id = item.get("id")
+                quantity = float(item.get("quantity", 0))
+                storage_type_id = item.get("storageType", "")
+
+                product_unit = get_object_or_404(ProductUnit, id=product_unit_id)
+                storage_type = get_object_or_404(StorageType, id=storage_type_id)
+                
+                product_unit.write_off = False
+                product_unit.location = storage_type
+                product_unit.save()
+
+                Write_off.objects.create(
+                    product_unit=product_unit,
+                    origin=storage_type,
+                    recomission_storage_type=storage_type,
+                    write_off_date=timezone.now(),
+                    observations="Recomissionamento de produto",
+                    storage_type=None,
+                    write_off_destination=None,
+                    created_by=request.user,
+                )
+
+                ClothConsumption.objects.create(
+                    product_unit=product_unit,
+                    remainder=quantity
+                )
+
+            WorkSpace.objects.filter(user=request.user).delete()
+            return JsonResponse({"success": True, "reload": True})
+
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "error": "Erro ao decodificar JSON"}, status=400)
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+    return JsonResponse({"success": False, "error": "Método não permitido"}, status=405)
