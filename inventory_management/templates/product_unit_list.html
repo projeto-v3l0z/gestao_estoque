@@ -4,29 +4,38 @@
 <div class="container py-3">
     <h1 class="text-center">Lista de Unidades de Produto</h1>
     <form id="filter_form" method="GET" action="">
-        <div class="row justify-content-center">
-            <div class="col-md-4">
-                <div class="input-group">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group mb-3">
                     <input type="text" class="form-control" id="code_search" name="code_search" value="{{ request.GET.code_search }}" placeholder="Pesquisar por Código">
-                    <button type="submit" class="btn btn-primary">Buscar</button>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="input-group">
+            <div class="col-md-6">
+                <div class="input-group mb-3">
                     <input type="text" class="form-control" id="name_search" name="name_search" value="{{ request.GET.name_search }}" placeholder="Pesquisar por Nome">
-                    <button type="submit" class="btn btn-primary">Buscar</button>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="input-group">
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group mb-3">
                     <select name="location" id="location" class="form-select">
                         <option value="">Filtrar por Localização</option>
                         {% for location in locations %}
                         <option value="{{ location.id }}"{% if request.GET.location == location.id %} selected{% endif %}>{{ location.name }}</option>
                         {% endfor %}
                     </select>
-                    <button type="submit" class="btn btn-primary">Filtrar</button>
                 </div>
+            </div>
+            <div class="col-md-6">
+                <div class="input-group mb-3">
+                    <input type="date" class="form-control" id="purchase_date" name="purchase_date" value="{{ request.GET.purchase_date }}">
+                </div>
+            </div>
+        </div>
+        <div class="row justify-content-center mt-3">
+            <div class="col-md-3 text-center">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
             </div>
         </div>
     </form>

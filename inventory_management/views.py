@@ -899,6 +899,7 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
         code_search = self.request.GET.get('code_search')  # Filtro por código
         name_search = self.request.GET.get('name_search')  # Filtro por nome
         location_id = self.request.GET.get('location')
+        purchase_date = self.request.GET.get('purchase_date')  # Novo filtro por data
 
         if code_search:
             queryset = queryset.filter(code__icontains=code_search)
@@ -908,6 +909,9 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
 
         if location_id:
             queryset = queryset.filter(location__id=location_id)
+
+        if purchase_date:  # Aplicar filtro por data de entrada
+            queryset = queryset.filter(purchase_date=purchase_date)
 
         return queryset.order_by('code')
 
