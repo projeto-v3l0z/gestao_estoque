@@ -1,12 +1,29 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %} 
+{% load static %}
+
+{% block extra_styles %}
+{{ form.media.css }}
+<style>
+  .select2-container {
+    width: 100% !important;
+  }
+
+  .select2-container--default .select2-selection--single {
+    height: 38px !important;
+  }
+</style>
+{% endblock extra_styles %}
+
+{% block content %}
+
 <div class="container py-3">
   <div class="card p-4">
     <form method="POST" action="">
       {% csrf_token %}
       <div class="row">
-        
         <div class="col-md-6 mb-3">
-          {{ form.product.label }} {{ form.product }}
+          <label for="{{ form.product.id_for_label }}">Produto</label>
+          {{ form.product }}
         </div>
         <div class="col-md-6 mb-3">
           {{ form.provider.label }} {{ form.provider }}
@@ -20,16 +37,14 @@
         <div class="col-md-6 mb-3">
           {{ form.location.label }} {{ form.location }}
         </div>
-        <div class="col-md-6 mb-3">
-          {{ form.building.label }} {{ form.building }}
-        </div>
-        <div class="col-md-6 mb-3">{{ form.room.label }} {{ form.room }}</div>
-        <div class="col-md-6 mb-3">{{ form.hall.label }} {{ form.hall }}</div>
-        <div class="col-md-6 mb-3">{{ form.shelf.label }} {{ form.shelf }}</div>
-
       </div>
       <button type="submit" class="btn btn-primary">Salvar</button>
     </form>
   </div>
 </div>
 {% endblock %}
+
+{% block extra_scripts %}
+<script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+{{ form.media.js }}
+{% endblock extra_scripts %}

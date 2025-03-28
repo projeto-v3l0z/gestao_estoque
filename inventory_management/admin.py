@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.urls import path
 from django.shortcuts import redirect
 from django.utils.safestring import mark_safe
+import re
 
 import base64
 from io import BytesIO
@@ -11,6 +12,8 @@ import qrcode
 from django.contrib import admin
 from .models import *
 from django.contrib.auth.models import Permission
+from django.db.models import IntegerField, Value
+from django.db.models.functions import Cast, Substr
 
 admin.site.site_header = 'Gestão de Estoque'
 admin.site.site_title = 'Administração'
@@ -85,10 +88,13 @@ class StockTransferInline(admin.TabularInline):
     
 @admin.register(ProductUnit)
 class ProductUnitAdmin(admin.ModelAdmin):
-    list_display = ('id','product', 'code' ,'location','shelf_or_none','weight_length_with_measure', 'write_off' , 'was_written_off' ,'qr_code_generated','purchase_date', "created_by", "created_at", "updated_by", "updated_at")
+    list_display = ('id', 'product', 'code', 'location', 'shelf_or_none', 'weight_length_with_measure',
+                    'write_off', 'was_written_off', 'qr_code_generated', 'purchase_date',
+                    "created_by", "created_at", "updated_by", "updated_at")
     search_fields = ('product__name', 'location__name', 'id', 'code')
-    list_filter = ('purchase_date', 'location','building', 'hall', 'room','shelf', 'write_off', 'was_written_off' ,'qr_code_generated')
-    fields = ['product', 'quantity', 'weight_length', 'incoming',]
+    list_filter = ('purchase_date', 'location', 'building', 'hall', 'room', 'shelf',
+                   'write_off', 'was_written_off', 'qr_code_generated')
+    fields = ['product', 'quantity', 'weight_length', 'incoming']
     actions = [download_qr_codes, write_off_products, write_on_products]
     inlines = [ClothConsumptionInline, StockTransferInline]
     
@@ -98,6 +104,13 @@ class ProductUnitAdmin(admin.ModelAdmin):
             'https://code.jquery.com/jquery-3.6.0.min.js',
             'admin/product_unit_admin.js',
         )
+        
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(
+            code_number=Cast(Substr('code', 5), IntegerField())
+        ).order_by('code_number')
 
     def get_fieldsets(self, request, obj=None):
         fieldsets = super().get_fieldsets(request, obj)
@@ -110,19 +123,17 @@ class ProductUnitAdmin(admin.ModelAdmin):
             fieldsets[last_fieldset_index] = tuple(last_fieldset)
             
         return fieldsets
-    
+
     def shelf_or_none(self, obj):
-        if obj.shelf:
-            return obj.shelf
-        return "N/A"
+        return obj.shelf if obj.shelf else "N/A"
     shelf_or_none.short_description = 'Gaveta'
 
     def weight_length_with_measure(self, obj):
         if obj.product.measure != 'u':
             product_measure = obj.product.get_measure_display()
             return f"{obj.weight_length} {product_measure}"
-        else:
-            return "Unitário"
+        return "Unitário"
+    
     weight_length_with_measure.short_description = 'Metro/Kg'
 
     def qr_code_image(self, obj):

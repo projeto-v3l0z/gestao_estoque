@@ -9,7 +9,7 @@
                 <div class="row justify-content-center">
                     <div class="col-md-8 col-lg-6">
                         <div class="input-group">
-                            <input type="text" class="form-control" id="search" name="search" value="{{ request.GET.search }}" placeholder="Pesquisar Produto">
+                            <input type="text" class="form-control " id="search" name="search" placeholder="Pesquisar Produto">
                             <button type="submit" class="btn btn-primary">Buscar</button>
                         </div>
                     </div>
@@ -61,7 +61,7 @@
             {% for num in page_obj.paginator.page_range %}
                 {% if page_obj.number == num %}
                     <li class="page-item active"><a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a></li>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}</page_obj.number>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                     <li class="page-item"><a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a></li>
                 {% endif %}
             {% endfor %}
