@@ -1048,8 +1048,8 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        code_search = self.request.GET.get('code_search')  # Filtro por código
-        name_search = self.request.GET.get('name_search')  # Filtro por nome
+        code_search = self.request.GET.get('code_search', '').strip()  # Filtro por código
+        name_search = self.request.GET.get('name_search', '').strip()  # Filtro por nome
         location_id = self.request.GET.get('location')
 
         if code_search:
