@@ -31,7 +31,7 @@ class ProductWidget(s2forms.HeavySelect2Widget):
     data_view = 'inventory_management:product-autocomplete'
 
 class ProductUnitForm(forms.ModelForm):
-    product = forms.ModelChoiceField(queryset=Product.objects.all(), widget=ProductWidget(attrs={'style': 'width: 300px;'}))
+    product = forms.ModelChoiceField(queryset=Product.objects.none(), widget=ProductWidget(attrs={'style': 'width: 300px;'}))
 
     class Meta:
         model = ProductUnit
@@ -45,5 +45,10 @@ class ProductUnitForm(forms.ModelForm):
             'weight_length': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Peso/Comprimento'}),
             'incoming': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Entrada'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['product'].queryset = Product.objects.all()
+
 
 
