@@ -31,7 +31,7 @@ class ProductWidget(s2forms.HeavySelect2Widget):
     data_view = 'inventory_management:product-autocomplete'
 
 class ProductUnitForm(forms.ModelForm):
-    product = forms.ModelChoiceField(queryset=Product.objects.none(), widget=ProductWidget(attrs={'style': 'width: 300px;'}))
+    product = forms.CharField(widget=ProductWidget(attrs={'style': 'width: 300px;'}))
 
     class Meta:
         model = ProductUnit
@@ -46,9 +46,13 @@ class ProductUnitForm(forms.ModelForm):
             'incoming': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Entrada'}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['product'].queryset = Product.objects.all()
+
+    def clean_product(self):
+        product_id = self.data.get('product')
+        try:
+            return Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            raise forms.ValidationError("Produto inválido")
 
 
 
