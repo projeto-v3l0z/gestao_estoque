@@ -341,7 +341,13 @@ class ProductCreateView(PermissionRequiredMixin, CreateView):
     template_name = 'product_create.html'
     form_class =ProductCreateForm
     permission_required = 'inventory_management.add_product_create'
-    success_url = reverse_lazy('inventory_management:product_list')    
+    success_url = reverse_lazy('inventory_management:product_list')  
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+
+        return super().form_valid(form)  
 
 class ProductUpdateView(UpdateView):
     model = Product
@@ -354,7 +360,9 @@ class ProductUpdateView(UpdateView):
 
     def form_valid(self, form):
         # Salvando o produto com os novos dados
-        product = form.save()
+        product = form.save(commit=False)
+        product.updated_by = self.request.user  # Atualiza o usuário que fez a alteração
+        product.save()
 
         # Redireciona para a página de detalhes do produto após a edição
         return redirect('inventory_management:product_list')
@@ -364,7 +372,6 @@ class ProductUpdateView(UpdateView):
         context['product'] = self.get_object()  # Adiciona o produto ao contexto
         return context
 
-    
 
 class ScanQRView(TemplateView):
     template_name = 'scan_qr.html'
@@ -579,6 +586,7 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
                 for product in WorkSpace.objects.filter(user=request.user):
                     product_unit = product.product
                     product_unit.write_off = True
+                    product_unit.updated_by = request.user
                     product_unit.save()
 
                     origin = product_unit.shelf if product_unit.shelf else product_unit.location
@@ -721,6 +729,7 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
                 for product in WorkSpace.objects.filter(user=request.user):
                     product_unit = product.product
                     product_unit.write_off = True
+                    product_unit.updated_by = request.user
                     product_unit.save()
 
                     origin = product_unit.shelf if product_unit.shelf else product_unit.location
@@ -806,6 +815,8 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
                         product_unit.room_id = None
                         product_unit.hall_id = None
                         product_unit.shelf_id = None
+
+                    product_unit.updated_by = request.user
 
                     product_unit.save()
 
@@ -1131,6 +1142,7 @@ def recomission_product_units(request):
                 
                 product_unit.write_off = False
                 product_unit.location = storage_type
+                product_unit.updated_by = request.user
                 product_unit.save()
 
                 Write_off.objects.create(
