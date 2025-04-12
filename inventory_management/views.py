@@ -1,10 +1,11 @@
 import json
-from django.views.generic import TemplateView, ListView, DetailView, CreateView
+from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView
 from django.http import JsonResponse
 from django.views import View
 from .models import *
+from .models import Product
 from django.shortcuts import redirect
-from .forms import ProductUnitForm, QRCodeForm
+from .forms import ProductUnitForm, QRCodeForm, ProductCreateForm
 from django.http import HttpResponse
 import qrcode
 from reportlab.pdfgen import canvas
@@ -335,12 +336,42 @@ class ProductUnitCreateView(PermissionRequiredMixin, CreateView):
     permission_required = 'inventory_management.add_productunit'
     success_url = reverse_lazy('inventory_management:product_unit_list')
 
+class ProductCreateView(PermissionRequiredMixin, CreateView):
+    model = Product
+    template_name = 'product_create.html'
+    form_class =ProductCreateForm
+    permission_required = 'inventory_management.add_product_create'
+    success_url = reverse_lazy('inventory_management:product_list')  
+
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         form.instance.updated_by = self.request.user
 
-        return super().form_valid(form)
-    
+        return super().form_valid(form)  
+
+class ProductUpdateView(UpdateView):
+    model = Product
+    form_class = ProductCreateForm
+    template_name = 'product_edit.html'
+
+    def get_object(self, queryset=None):
+        product_id = self.kwargs.get('product_id')
+        return get_object_or_404(Product, id=product_id)
+
+    def form_valid(self, form):
+        # Salvando o produto com os novos dados
+        product = form.save(commit=False)
+        product.updated_by = self.request.user  # Atualiza o usuário que fez a alteração
+        product.save()
+
+        # Redireciona para a página de detalhes do produto após a edição
+        return redirect('inventory_management:product_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['product'] = self.get_object()  # Adiciona o produto ao contexto
+        return context
+
 
 class ScanQRView(TemplateView):
     template_name = 'scan_qr.html'
