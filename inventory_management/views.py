@@ -334,6 +334,12 @@ class ProductUnitCreateView(PermissionRequiredMixin, CreateView):
     form_class = ProductUnitForm
     permission_required = 'inventory_management.add_productunit'
     success_url = reverse_lazy('inventory_management:product_unit_list')
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+
+        return super().form_valid(form)
     
 
 class ScanQRView(TemplateView):
@@ -549,6 +555,7 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
                 for product in WorkSpace.objects.filter(user=request.user):
                     product_unit = product.product
                     product_unit.write_off = True
+                    product_unit.updated_by = request.user
                     product_unit.save()
 
                     origin = product_unit.shelf if product_unit.shelf else product_unit.location
@@ -691,6 +698,7 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
                 for product in WorkSpace.objects.filter(user=request.user):
                     product_unit = product.product
                     product_unit.write_off = True
+                    product_unit.updated_by = request.user
                     product_unit.save()
 
                     origin = product_unit.shelf if product_unit.shelf else product_unit.location
@@ -776,6 +784,8 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
                         product_unit.room_id = None
                         product_unit.hall_id = None
                         product_unit.shelf_id = None
+
+                    product_unit.updated_by = request.user
 
                     product_unit.save()
 
@@ -1101,6 +1111,7 @@ def recomission_product_units(request):
                 
                 product_unit.write_off = False
                 product_unit.location = storage_type
+                product_unit.updated_by = request.user
                 product_unit.save()
 
                 Write_off.objects.create(
