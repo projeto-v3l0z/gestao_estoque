@@ -1,43 +1,31 @@
 {% extends "base.html" %}
 {% load iam_tags static %}
+
+{% block extra_styles %}
+{{ form.media.css }}
+<style>
+    .select2-container {
+      width: 100% !important;
+    }
+  
+    .select2-container--default .select2-selection--single {
+      height: 38px !important;
+    }
+  </style>
+{% endblock extra_styles %}
+
 {% block content %}
 <div class="container py-3">
-    <h1 class="text-center">Lista de Unidades de Produto</h1>
-    {% if user|has_perm:"inventory_management.add_productunit" %}
-    <div class="row justify-content-center mb-3">
-        <div class="col-12 text-center">
-            <a href="{% url 'inventory_management:product_unit_create' %}" class="btn btn-primary">Adicionar Unidade de Produto</a>
-        </div>
-    </div>
-    {% endif %}
+    <h1 class="text-center">Unidades de Produto</h1>
     <form id="filter_form" method="GET" action="">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" id="code_search" name="code_search" value="{{ request.GET.code_search }}" placeholder="Pesquisar por Código">
+        <div class="row justify-content-center">
+                {% for field in form %}
+                <div class="col-md-6 mb-3">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
                 </div>
+                {% endfor %}
             </div>
-            <div class="col-md-6">
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" id="name_search" name="name_search" value="{{ request.GET.name_search }}" placeholder="Pesquisar por Nome">
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="input-group mb-3">
-                    <select name="location" id="location" class="form-select">
-                        <option value="">Filtrar por Localização</option>
-                        {% for location in locations %}
-                        <option value="{{ location.id }}"{% if request.GET.location == location.id %} selected{% endif %}>{{ location.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="input-group mb-3">
-                    <input type="date" class="form-control" id="creation_date" name="creation_date" value="{{ request.GET.creation_date }}">
-                </div>
-            </div>
-        </div>
         <div class="row justify-content-center mt-3">
             <div class="col-md-3 text-center">
                 <button type="submit" class="btn btn-primary">Filtrar</button>
@@ -47,7 +35,9 @@
     <div class="row">
         {% if product_units %}
         <div class="col-12">
-            <h2 class="text-center mb-4 mt-4">Unidades de Produto</h2>
+            {% if user|has_perm:"inventory_management.add_productunit" %}
+            <a href="{% url 'inventory_management:product_unit_create' %}" class="btn btn-success mb-3">Adicionar Unidade de Produto</a>
+            {% endif %}
             <table class="table table-striped table-bordered">
                 <thead class="thead-dark">
                     <tr>
@@ -57,6 +47,7 @@
                         <th>Baixado</th>
                         <th>Localização</th>
                         <th>Metro</th>
+                        <th>Data Criação</th>
                         <th>Detalhes</th>
                     </tr>
                 </thead>
@@ -74,6 +65,7 @@
                         <td>{{ unit.location.name }}</td>
                         {% endif %}
                         <td>{{ unit.weight_length|default:"0.00" }}</td>
+                        <td>{{ unit.created_at|date:"d/m/Y" }}</td>
                         <td>
                             <a href="{% url 'inventory_management:product_unit_detail' unit.product.slug unit.slug %}" class="btn btn-info btn-sm">Ver Detalhes</a>
                         </td>
@@ -117,3 +109,7 @@
     {% endif %}
 </div>
 {% endblock %} 
+{% block extra_scripts %}
+<script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+{{ form.media.js }}
+{% endblock extra_scripts %}

@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView
 from django.http import JsonResponse
@@ -5,7 +6,7 @@ from django.views import View
 from .models import *
 from .models import Product
 from django.shortcuts import redirect
-from .forms import ProductUnitForm, QRCodeForm, ProductCreateForm
+from .forms import FilterProductForm, FilterProductUnitForm, ProductUnitForm, QRCodeForm, ProductCreateForm
 from django.http import HttpResponse
 import qrcode
 from reportlab.pdfgen import canvas
@@ -49,12 +50,17 @@ class ProductListView(PermissionRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        search = self.request.GET.get('search', '').strip()
+        products = self.request.GET.getlist('product', None)
         
-        if search:
-            queryset = queryset.filter(name__icontains=search.lower())
+        if products:
+            queryset = queryset.filter(product__id__in=products)
             
         return queryset.order_by('name')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = FilterProductForm(self.request.GET or None)
+        return context
 
 
 class ProductDetailView(PermissionRequiredMixin, DetailView):
@@ -1089,42 +1095,35 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        code_search = self.request.GET.get('code_search', '').strip()  # Filtro por código
-        name_search = self.request.GET.get('name_search', '').strip()  # Filtro por nome
+        code_search = self.request.GET.get('code', '').strip()  # Filtro por código
+        products = self.request.GET.getlist('product', '')  # Filtro por nome do produto
         location_id = self.request.GET.get('location')
-        creation_date = self.request.GET.get('creation_date')  # Filtro por data de criação
+        creation_date = self.request.GET.get('created_at') 
 
         if code_search:
             queryset = queryset.filter(code__icontains=code_search)
 
-        if name_search:
-            queryset = queryset.filter(product__name__icontains=name_search)
+        if products:
+            queryset = queryset.filter(product__id__in=products)
 
         if location_id:
             queryset = queryset.filter(location__id=location_id).filter(write_off=False)
 
         if creation_date:
-            queryset = queryset.filter(created_at__date=creation_date)  # Filtro por data de criação
+            date = datetime.strptime(creation_date, '%Y-%m-%d').date()
+            queryset = queryset.filter(created_at__gte=date).filter(write_off=False)
 
         return queryset.order_by('code')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['form'] = FilterProductUnitForm(self.request.GET or None)
         context['locations'] = StorageType.objects.exclude(name__in=["Baixa"])
         return context
 
-def create_product_unit(request):
-    if request.method == 'POST':
-        form = ProductUnitForm(request.POST)
-        if form.is_valid():
-            product_unit = form.save(commit=False)
-            
-            product_unit.save()
-            
-
 class ProductAutoComplete(View):
     def get(self, request, *args, **kwargs):
-        term = request.GET.get("term", "").strip()  # Captura a busca digitada no Select2
+        term = request.GET.get("term", "").strip()
         produtos = Product.objects.filter(name__icontains=term)[:10]  # Busca limitada a 10 resultados
         results = [{"id": produto.id, "text": produto.name} for produto in produtos]
         return JsonResponse({"results": results})

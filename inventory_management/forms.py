@@ -1,6 +1,6 @@
 # forms.py
 from django import forms
-from .models import Product, Building, ProductUnit, Hall, Rooms, Shelf
+from .models import Product, Building, ProductUnit, Hall, Rooms, Shelf, StorageType
 from django_select2 import forms as s2forms
 
 class QRCodeForm(forms.Form):
@@ -28,6 +28,9 @@ class UploadExcelForm(forms.Form):
         return cleaned_data
     
 class ProductWidget(s2forms.HeavySelect2Widget):
+    data_view = 'inventory_management:product-autocomplete'
+
+class ProductMultipleWidget(s2forms.HeavySelect2MultipleWidget):
     data_view = 'inventory_management:product-autocomplete'
 
 class ProductUnitForm(forms.ModelForm):
@@ -70,4 +73,22 @@ class ProductCreateForm(forms.ModelForm):
             'code1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'código 1'}),
             'code2': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'código 2'}),
         }
-        
+
+
+class FilterProductUnitForm(forms.Form):
+    product = forms.ModelChoiceField(widget=ProductMultipleWidget(attrs={'class': 'form-control'}), required=False, label="Produto", queryset=Product.objects.none())
+    code = forms.CharField(max_length=100, required=False, label="Código", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Código'}))
+    location = forms.ModelChoiceField(queryset=StorageType.objects.all(), required=False, label="Localização", widget=forms.Select(attrs={'class': 'form-control'}))
+    created_at = forms.DateField(required=False, label="Data de Criação", widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'product' in self.data:
+            try:
+                product_ids = self.data.getlist('product')
+                self.fields['product'].queryset = Product.objects.filter(id__in=product_ids)
+            except (ValueError, TypeError):
+                pass
+
+class FilterProductForm(forms.Form):
+    product = forms.ModelChoiceField(widget=ProductMultipleWidget(attrs={'class': 'form-control'}), required=False, label="Produto", queryset=Product.objects.none())
