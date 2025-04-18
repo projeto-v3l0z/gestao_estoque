@@ -34,4 +34,7 @@ urlpatterns = [
     path('product-unit/create/', ProductUnitCreateView.as_view(), name='product_unit_create'),
     # path('product-unit/update/<uuid:pk>/', ProductUnitUpdateView.as_view(), name='product_unit_update'),
     path('product-autocomplete/', ProductAutoComplete.as_view(), name='product-autocomplete'),
+
+    # qr code unidade de produto
+    path('unidades/qr-code', generate_product_unit_qr_codes, name='generate_product_unit_qr_code'),
 ]

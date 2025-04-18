@@ -437,6 +437,111 @@ def calculate_items_per_page(page_width, page_height, qr_size, columns):
 
     return items_per_page
 
+def generate_product_unit_qr_codes(request):
+    host = request.get_host()
+    if request.method == 'POST':
+        selected_items = request.POST.getlist('selected_items')
+        size_preset = request.POST.get('size_preset')
+
+        if selected_items and size_preset:
+            selected_item_ids = selected_items
+            queryset = ProductUnit.objects.filter(id__in=selected_item_ids)
+
+            qr_codes = []
+            for item in queryset:
+                data = f"http://{host}{item.get_absolute_url()}"
+                qr = qrcode.make(data, box_size=get_qr_size(size_preset))
+                qr_codes.append((qr, item))
+                item.mark_qr_code_generated()
+
+            local_now = timezone.localtime(timezone.now())
+            timestamp = local_now.strftime("%d-%m-%Y_%H%M%S")
+
+            unique_products = set(product_unit.product.name for product_unit in queryset)
+            products_str = '_'.join(unique_products)
+            filename = f"qr_codes_{products_str}_{timestamp}.pdf"
+
+            response = HttpResponse(content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            buffer = BytesIO()
+            c = canvas.Canvas(buffer, pagesize=letter)
+
+            x_offset = 50
+            top_margin = 200
+            qr_size = get_qr_size(size_preset)
+            page_width, page_height = letter
+            if size_preset == 'pequeno':
+                columns = 4
+            elif size_preset == 'medio':
+                columns = 3
+            elif size_preset == 'grande':
+                columns = 2
+                top_margin = 300
+
+            items_per_page = calculate_items_per_page(page_width, page_height, qr_size, columns)
+
+            pdfmetrics.registerFont(TTFont('VeraBd', 'VeraBd.ttf'))
+
+            for idx, (qr, item) in enumerate(qr_codes):
+                row = idx // columns
+                col = idx % columns
+
+                if idx > 0 and idx % items_per_page == 0:
+                    c.showPage()
+
+                # Ajustar a posição inicial do QR Code e do texto com base na margem superior
+                y_coordinate = page_height - top_margin - (row % (items_per_page // columns)) * (qr_size + 80)
+                x_coordinate = 50 + x_offset + col * (qr_size + 20)
+
+                # Nome do produto (acima do QR Code)
+                product_name = item.product.name.upper()
+                max_width = qr_size
+                wrapped_text = wrap_text(product_name, max_width, c, "VeraBd", 9)  # Função para quebrar o texto
+                total_text_height = len(wrapped_text) * 11 
+                text_start_y = y_coordinate + qr_size + total_text_height + 1  # Começar pelo topo do texto
+
+                for line in wrapped_text:
+                    text_width = c.stringWidth(line, "VeraBd", 9)
+                    line_x = x_coordinate + (qr_size - text_width) / 2
+                    text_start_y -= 10  # Subtrair o espaçamento por linha
+                    c.drawString(line_x, text_start_y, line)
+
+                # Desenhar o QR Code
+                c.drawInlineImage(qr, x_coordinate, y_coordinate, width=qr_size, height=qr_size)
+
+                product_code = item.code
+                text_width = c.stringWidth(product_code, "VeraBd", 9)
+                code_x = x_coordinate + (qr_size - text_width) / 2
+                c.drawString(code_x, y_coordinate - 5, product_code)
+
+                # Código do produto (abaixo do QR Code)
+                product_code1 = item.product.code1
+                product_code2 = item.product.code2
+                if product_code1:
+                    product_code = f"Código 1: {product_code1}"
+                    text_width = c.stringWidth(product_code, "VeraBd", 9)
+                    code_x = x_coordinate + (qr_size - text_width) / 2
+                    c.drawString(code_x, y_coordinate - 15, product_code)
+                if product_code2:
+                    product_code = f"Código 2: {product_code2}"
+                    text_width = c.stringWidth(product_code, "VeraBd", 9)
+                    code_x = x_coordinate + (qr_size - text_width) / 2
+                    c.drawString(code_x, y_coordinate - 25, product_code)
+
+            c.showPage()
+            c.save()
+            pdf_data = buffer.getvalue()
+            buffer.close()
+            response.write(pdf_data)
+
+            return response
+        else:
+            messages.error(request, "Selecione pelo menos um item e um tamanho de QR Code.")
+            return redirect('inventory_management:product_unit_list')
+    else:
+        messages.error(request, "Método não permitido.")
+        return redirect('inventory_management:product_unit_list')
+
 
 def generate_qr_codes(request):
     host = request.get_host()
