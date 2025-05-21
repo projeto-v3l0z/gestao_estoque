@@ -89,6 +89,14 @@ class FilterProductUnitForm(forms.Form):
                 self.fields['product'].queryset = Product.objects.filter(id__in=product_ids)
             except (ValueError, TypeError):
                 pass
+              
+    def clean_product(self):
+        product_id = self.data.get('product')
+        try:
+            return Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            raise forms.ValidationError("Produto inválido")
 
 class FilterProductForm(forms.Form):
     product = forms.ModelChoiceField(widget=ProductMultipleWidget(attrs={'class': 'form-control'}), required=False, label="Produto", queryset=Product.objects.none())
+
