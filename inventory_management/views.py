@@ -50,10 +50,10 @@ class ProductListView(PermissionRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        products = self.request.GET.getlist('product', None)
+        products = self.request.GET.getlist('name', None)
         
         if products:
-            queryset = queryset.filter(product__id__in=products)
+            queryset = queryset.filter(id__in=products)
             
         return queryset.order_by('name')
     

@@ -98,5 +98,15 @@ class FilterProductUnitForm(forms.Form):
             raise forms.ValidationError("Produto inválido")
 
 class FilterProductForm(forms.Form):
-    product = forms.ModelChoiceField(widget=ProductMultipleWidget(attrs={'class': 'form-control'}), required=False, label="Produto", queryset=Product.objects.none())
+    name = forms.ModelChoiceField(widget=ProductMultipleWidget(attrs={'class': 'form-control'}), required=False, label="Produto", queryset=Product.objects.none())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'name' in self.data:
+            try:
+                product_ids = self.data.getlist('name')
+                self.fields['name'].queryset = Product.objects.filter(id__in=product_ids)
+            except (ValueError, TypeError):
+                pass
+
 
