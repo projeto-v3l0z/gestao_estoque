@@ -9,6 +9,8 @@ urlpatterns = [
     path('unidades/', ProductUnitListView.as_view(), name='product_unit_list'),
     path('produto/<slug:slug>/', ProductDetailView.as_view(), name='product_detail'),
     path('produto/<slug:product_slug>/unidade/<slug:slug>/', ProductUnitDetailView.as_view(), name='product_unit_detail'),
+    path('produto/', ProductCreateView.as_view(), name='product_create'),
+    path('produtos/editarprodutos/<uuid:product_id>/', ProductUpdateView.as_view(), name = 'product_edit'),
     path('escanearQR/', ScanQRView.as_view(), name='scan_qr'),
     path('sobre/', AboutView.as_view(), name='about'),
     path('enderecos/', AdressesView.as_view(), name='adresses'),
@@ -32,4 +34,7 @@ urlpatterns = [
     path('product-unit/create/', ProductUnitCreateView.as_view(), name='product_unit_create'),
     # path('product-unit/update/<uuid:pk>/', ProductUnitUpdateView.as_view(), name='product_unit_update'),
     path('product-autocomplete/', ProductAutoComplete.as_view(), name='product-autocomplete'),
+
+    # qr code unidade de produto
+    path('unidades/qr-code', generate_product_unit_qr_codes, name='generate_product_unit_qr_code'),
 ]

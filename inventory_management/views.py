@@ -1,10 +1,12 @@
+from datetime import datetime
 import json
-from django.views.generic import TemplateView, ListView, DetailView, CreateView
+from django.views.generic import TemplateView, ListView, DetailView, CreateView, UpdateView
 from django.http import JsonResponse
 from django.views import View
 from .models import *
+from .models import Product
 from django.shortcuts import redirect
-from .forms import ProductUnitForm, QRCodeForm
+from .forms import FilterProductForm, FilterProductUnitForm, ProductUnitForm, QRCodeForm, ProductCreateForm
 from django.http import HttpResponse
 import qrcode
 from reportlab.pdfgen import canvas
@@ -48,12 +50,17 @@ class ProductListView(PermissionRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        search = self.request.GET.get('search', '').strip()
+        products = self.request.GET.getlist('product', None)
         
-        if search:
-            queryset = queryset.filter(name__icontains=search.lower())
+        if products:
+            queryset = queryset.filter(product__id__in=products)
             
         return queryset.order_by('name')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = FilterProductForm(self.request.GET or None)
+        return context
 
 
 class ProductDetailView(PermissionRequiredMixin, DetailView):
@@ -334,7 +341,43 @@ class ProductUnitCreateView(PermissionRequiredMixin, CreateView):
     form_class = ProductUnitForm
     permission_required = 'inventory_management.add_productunit'
     success_url = reverse_lazy('inventory_management:product_unit_list')
-    
+
+class ProductCreateView(PermissionRequiredMixin, CreateView):
+    model = Product
+    template_name = 'product_create.html'
+    form_class =ProductCreateForm
+    permission_required = 'inventory_management.add_product_create'
+    success_url = reverse_lazy('inventory_management:product_list')  
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
+
+        return super().form_valid(form)  
+
+class ProductUpdateView(UpdateView):
+    model = Product
+    form_class = ProductCreateForm
+    template_name = 'product_edit.html'
+
+    def get_object(self, queryset=None):
+        product_id = self.kwargs.get('product_id')
+        return get_object_or_404(Product, id=product_id)
+
+    def form_valid(self, form):
+        # Salvando o produto com os novos dados
+        product = form.save(commit=False)
+        product.updated_by = self.request.user  # Atualiza o usuário que fez a alteração
+        product.save()
+
+        # Redireciona para a página de detalhes do produto após a edição
+        return redirect('inventory_management:product_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['product'] = self.get_object()  # Adiciona o produto ao contexto
+        return context
+
 
 class ScanQRView(TemplateView):
     template_name = 'scan_qr.html'
@@ -393,6 +436,111 @@ def calculate_items_per_page(page_width, page_height, qr_size, columns):
     items_per_page = max_rows * max_columns
 
     return items_per_page
+
+def generate_product_unit_qr_codes(request):
+    host = request.get_host()
+    if request.method == 'POST':
+        selected_items = request.POST.getlist('selected_items')
+        size_preset = request.POST.get('size_preset')
+
+        if selected_items and size_preset:
+            selected_item_ids = selected_items
+            queryset = ProductUnit.objects.filter(id__in=selected_item_ids)
+
+            qr_codes = []
+            for item in queryset:
+                data = f"http://{host}{item.get_absolute_url()}"
+                qr = qrcode.make(data, box_size=get_qr_size(size_preset))
+                qr_codes.append((qr, item))
+                item.mark_qr_code_generated()
+
+            local_now = timezone.localtime(timezone.now())
+            timestamp = local_now.strftime("%d-%m-%Y_%H%M%S")
+
+            unique_products = set(product_unit.product.name for product_unit in queryset)
+            products_str = '_'.join(unique_products)
+            filename = f"qr_codes_{products_str}_{timestamp}.pdf"
+
+            response = HttpResponse(content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            buffer = BytesIO()
+            c = canvas.Canvas(buffer, pagesize=letter)
+
+            x_offset = 50
+            top_margin = 200
+            qr_size = get_qr_size(size_preset)
+            page_width, page_height = letter
+            if size_preset == 'pequeno':
+                columns = 4
+            elif size_preset == 'medio':
+                columns = 3
+            elif size_preset == 'grande':
+                columns = 2
+                top_margin = 300
+
+            items_per_page = calculate_items_per_page(page_width, page_height, qr_size, columns)
+
+            pdfmetrics.registerFont(TTFont('VeraBd', 'VeraBd.ttf'))
+
+            for idx, (qr, item) in enumerate(qr_codes):
+                row = idx // columns
+                col = idx % columns
+
+                if idx > 0 and idx % items_per_page == 0:
+                    c.showPage()
+
+                # Ajustar a posição inicial do QR Code e do texto com base na margem superior
+                y_coordinate = page_height - top_margin - (row % (items_per_page // columns)) * (qr_size + 80)
+                x_coordinate = 50 + x_offset + col * (qr_size + 20)
+
+                # Nome do produto (acima do QR Code)
+                product_name = item.product.name.upper()
+                max_width = qr_size
+                wrapped_text = wrap_text(product_name, max_width, c, "VeraBd", 9)  # Função para quebrar o texto
+                total_text_height = len(wrapped_text) * 11 
+                text_start_y = y_coordinate + qr_size + total_text_height + 1  # Começar pelo topo do texto
+
+                for line in wrapped_text:
+                    text_width = c.stringWidth(line, "VeraBd", 9)
+                    line_x = x_coordinate + (qr_size - text_width) / 2
+                    text_start_y -= 10  # Subtrair o espaçamento por linha
+                    c.drawString(line_x, text_start_y, line)
+
+                # Desenhar o QR Code
+                c.drawInlineImage(qr, x_coordinate, y_coordinate, width=qr_size, height=qr_size)
+
+                product_code = item.code
+                text_width = c.stringWidth(product_code, "VeraBd", 9)
+                code_x = x_coordinate + (qr_size - text_width) / 2
+                c.drawString(code_x, y_coordinate - 5, product_code)
+
+                # Código do produto (abaixo do QR Code)
+                product_code1 = item.product.code1
+                product_code2 = item.product.code2
+                if product_code1:
+                    product_code = f"Código 1: {product_code1}"
+                    text_width = c.stringWidth(product_code, "VeraBd", 9)
+                    code_x = x_coordinate + (qr_size - text_width) / 2
+                    c.drawString(code_x, y_coordinate - 15, product_code)
+                if product_code2:
+                    product_code = f"Código 2: {product_code2}"
+                    text_width = c.stringWidth(product_code, "VeraBd", 9)
+                    code_x = x_coordinate + (qr_size - text_width) / 2
+                    c.drawString(code_x, y_coordinate - 25, product_code)
+
+            c.showPage()
+            c.save()
+            pdf_data = buffer.getvalue()
+            buffer.close()
+            response.write(pdf_data)
+
+            return response
+        else:
+            messages.error(request, "Selecione pelo menos um item e um tamanho de QR Code.")
+            return redirect('inventory_management:product_unit_list')
+    else:
+        messages.error(request, "Método não permitido.")
+        return redirect('inventory_management:product_unit_list')
 
 
 def generate_qr_codes(request):
@@ -549,6 +697,7 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
                 for product in WorkSpace.objects.filter(user=request.user):
                     product_unit = product.product
                     product_unit.write_off = True
+                    product_unit.updated_by = request.user
                     product_unit.save()
 
                     origin = product_unit.shelf if product_unit.shelf else product_unit.location
@@ -691,6 +840,7 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
                 for product in WorkSpace.objects.filter(user=request.user):
                     product_unit = product.product
                     product_unit.write_off = True
+                    product_unit.updated_by = request.user
                     product_unit.save()
 
                     origin = product_unit.shelf if product_unit.shelf else product_unit.location
@@ -776,6 +926,8 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
                         product_unit.room_id = None
                         product_unit.hall_id = None
                         product_unit.shelf_id = None
+
+                    product_unit.updated_by = request.user
 
                     product_unit.save()
 
@@ -1048,38 +1200,35 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        code_search = self.request.GET.get('code_search')  # Filtro por código
-        name_search = self.request.GET.get('name_search')  # Filtro por nome
+        code_search = self.request.GET.get('code', '').strip()  # Filtro por código
+        products = self.request.GET.getlist('product', '')  # Filtro por nome do produto
         location_id = self.request.GET.get('location')
+        creation_date = self.request.GET.get('created_at') 
 
         if code_search:
             queryset = queryset.filter(code__icontains=code_search)
 
-        if name_search:
-            queryset = queryset.filter(product__name__icontains=name_search)
+        if products:
+            queryset = queryset.filter(product__id__in=products)
 
         if location_id:
             queryset = queryset.filter(location__id=location_id).filter(write_off=False)
+
+        if creation_date:
+            date = datetime.strptime(creation_date, '%Y-%m-%d').date()
+            queryset = queryset.filter(created_at__gte=date).filter(write_off=False)
 
         return queryset.order_by('code')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['form'] = FilterProductUnitForm(self.request.GET or None)
         context['locations'] = StorageType.objects.exclude(name__in=["Baixa"])
         return context
 
-def create_product_unit(request):
-    if request.method == 'POST':
-        form = ProductUnitForm(request.POST)
-        if form.is_valid():
-            product_unit = form.save(commit=False)
-            
-            product_unit.save()
-            
-
 class ProductAutoComplete(View):
     def get(self, request, *args, **kwargs):
-        term = request.GET.get("term", "").strip()  # Captura a busca digitada no Select2
+        term = request.GET.get("term", "").strip()
         produtos = Product.objects.filter(name__icontains=term)[:10]  # Busca limitada a 10 resultados
         results = [{"id": produto.id, "text": produto.name} for produto in produtos]
         return JsonResponse({"results": results})
@@ -1101,6 +1250,7 @@ def recomission_product_units(request):
                 
                 product_unit.write_off = False
                 product_unit.location = storage_type
+                product_unit.updated_by = request.user
                 product_unit.save()
 
                 Write_off.objects.create(

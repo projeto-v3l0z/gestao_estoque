@@ -1,6 +1,6 @@
 # forms.py
 from django import forms
-from .models import Product, Building, ProductUnit, Hall, Rooms, Shelf
+from .models import Product, Building, ProductUnit, Hall, Rooms, Shelf, StorageType
 from django_select2 import forms as s2forms
 
 class QRCodeForm(forms.Form):
@@ -30,6 +30,9 @@ class UploadExcelForm(forms.Form):
 class ProductWidget(s2forms.HeavySelect2Widget):
     data_view = 'inventory_management:product-autocomplete'
 
+class ProductMultipleWidget(s2forms.HeavySelect2MultipleWidget):
+    data_view = 'inventory_management:product-autocomplete'
+
 class ProductUnitForm(forms.ModelForm):
     product = forms.CharField(widget=ProductWidget(attrs={'style': 'width: 300px;'}))
 
@@ -45,8 +48,7 @@ class ProductUnitForm(forms.ModelForm):
             'weight_length': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Peso/Comprimento'}),
             'incoming': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Entrada'}),
         }
-
-
+    
     def clean_product(self):
         product_id = self.data.get('product')
         try:
@@ -55,4 +57,46 @@ class ProductUnitForm(forms.ModelForm):
             raise forms.ValidationError("Produto inválido")
 
 
+class ProductCreateForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        exclude = ['color','color_id','created_by','created_at','update_by','update_at','created_by_id','id','productunit','slug','updated_by_id','pattern','patternn_id']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'nome'}),
+            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'descrição'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'preço'}),
+            'measure': forms.Select(choices=Product.MEASURE_CHOICES, attrs={'class': 'form-control', 'placeholder': 'medida'}),
+            'width': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'largura'}),
+            'composition': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'composição'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control', 'placeholder': 'imagem'}),
+            'ncm': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ncm'}),
+            'code1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'código 1'}),
+            'code2': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'código 2'}),
+        }
+
+
+class FilterProductUnitForm(forms.Form):
+    product = forms.ModelChoiceField(widget=ProductMultipleWidget(attrs={'class': 'form-control'}), required=False, label="Produto", queryset=Product.objects.none())
+    code = forms.CharField(max_length=100, required=False, label="Código", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Código'}))
+    location = forms.ModelChoiceField(queryset=StorageType.objects.all(), required=False, label="Localização", widget=forms.Select(attrs={'class': 'form-control'}))
+    created_at = forms.DateField(required=False, label="Data de Criação", widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'product' in self.data:
+            try:
+                product_ids = self.data.getlist('product')
+                self.fields['product'].queryset = Product.objects.filter(id__in=product_ids)
+            except (ValueError, TypeError):
+                pass
+              
+    def clean_product(self):
+        product_id = self.data.get('product')
+        try:
+            return Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            raise forms.ValidationError("Produto inválido")
+
+class FilterProductForm(forms.Form):
+    product = forms.ModelChoiceField(widget=ProductMultipleWidget(attrs={'class': 'form-control'}), required=False, label="Produto", queryset=Product.objects.none())
 
