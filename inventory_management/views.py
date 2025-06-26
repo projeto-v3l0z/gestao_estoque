@@ -153,18 +153,33 @@ class ProductUnitDetailView(DetailView):
         return redirect(product_unit.get_absolute_url())
 
     def write_off(self, request, product_unit):
+        # Salvar a localização original antes da baixa
+        original_location = product_unit.shelf if product_unit.shelf else product_unit.location
+        
+        # Marcar como baixado
         product_unit.write_off = True
+        
+        # Alterar a localização para "Baixa"
+        baixa_storage_type = StorageType.objects.get_or_create(name="Baixa")[0]
+        product_unit.location = baixa_storage_type
+        
+        # Limpar informações de localização física
+        product_unit.building = None
+        product_unit.hall = None
+        product_unit.room = None
+        product_unit.shelf = None
+        
         write_off_destination_id = request.POST.get('write_off_destination')
         write_off_destination = WriteOffDestinations.objects.get(pk=write_off_destination_id)
-        origin = product_unit.shelf if product_unit.shelf else product_unit.location
 
         Write_off.objects.create(
             product_unit=product_unit,
-            origin=origin,
-            storage_type=StorageType.objects.get_or_create(name="Baixa")[0],
+            origin=original_location,  # Usar a localização original
+            storage_type=baixa_storage_type,
             write_off_date=timezone.now(),
             observations="Baixa de produto",
-            write_off_destination=write_off_destination
+            write_off_destination=write_off_destination,
+            created_by=request.user,
         )
 
         product_unit.save()
@@ -694,17 +709,28 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
             if write_off_destination_id:
                 print("Processing write off")
                 write_off_destination = get_object_or_404(WriteOffDestinations, pk=write_off_destination_id)
+                baixa_storage_type = StorageType.objects.get_or_create(name="Baixa")[0]
+                
                 for product in WorkSpace.objects.filter(user=request.user):
                     product_unit = product.product
+                    
+                    # Salvar localização original
+                    origin = product_unit.shelf if product_unit.shelf else product_unit.location
+                    
+                    # Marcar como baixado e alterar localização
                     product_unit.write_off = True
+                    product_unit.location = baixa_storage_type
+                    product_unit.building = None
+                    product_unit.hall = None
+                    product_unit.room = None
+                    product_unit.shelf = None
                     product_unit.updated_by = request.user
                     product_unit.save()
 
-                    origin = product_unit.shelf if product_unit.shelf else product_unit.location
                     Write_off.objects.create(
                         product_unit=product_unit,
-                        origin=origin,
-                        storage_type=StorageType.objects.get_or_create(name="Baixa")[0],
+                        origin=origin,  # Localização original
+                        storage_type=baixa_storage_type,
                         write_off_date=timezone.now(),
                         observations="Baixa de produto",
                         write_off_destination=write_off_destination,
@@ -837,17 +863,28 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
             if write_off_destination_id:
                 print("Processing write off")
                 write_off_destination = get_object_or_404(WriteOffDestinations, pk=write_off_destination_id)
+                baixa_storage_type = StorageType.objects.get_or_create(name="Baixa")[0]
+                
                 for product in WorkSpace.objects.filter(user=request.user):
                     product_unit = product.product
+                    
+                    # Salvar localização original
+                    origin = product_unit.shelf if product_unit.shelf else product_unit.location
+                    
+                    # Marcar como baixado e alterar localização
                     product_unit.write_off = True
+                    product_unit.location = baixa_storage_type
+                    product_unit.building = None
+                    product_unit.hall = None
+                    product_unit.room = None
+                    product_unit.shelf = None
                     product_unit.updated_by = request.user
                     product_unit.save()
 
-                    origin = product_unit.shelf if product_unit.shelf else product_unit.location
                     Write_off.objects.create(
                         product_unit=product_unit,
-                        origin=origin,
-                        storage_type=StorageType.objects.get_or_create(name="Baixa")[0],
+                        origin=origin,  # Localização original
+                        storage_type=baixa_storage_type,
                         write_off_date=timezone.now(),
                         observations="Baixa de produto",
                         write_off_destination=write_off_destination,
