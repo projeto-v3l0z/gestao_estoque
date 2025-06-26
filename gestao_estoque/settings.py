@@ -93,7 +93,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     },
-    'default': {
+    'mysql': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.environ.get("DB_NAME"),
         'USER': os.environ.get("DB_USER"),
@@ -102,6 +102,9 @@ DATABASES = {
         'PORT': os.environ.get("DB_PORT"),
     }
 }
+
+db_used = os.environ.get('DB_USED')
+DATABASES['default'] = DATABASES[db_used]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
