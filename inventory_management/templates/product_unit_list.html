@@ -55,6 +55,7 @@
                         <th>Produto</th>
                         <th>Quantidade</th>
                         <th>Baixado</th>
+                        <th>Qr code gerado?</th>
                         <th>Localização</th>
                         <th>Metro</th>
                         <th>Detalhes</th>
@@ -71,6 +72,15 @@
                         <td>-</td>
                         {% else %}
                         <td>Não</td>
+                        <td>
+                            {% if unit.qr_code_generated %}
+                            <span>sim</span>
+                            {% else %}
+                            <span>não</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        {% if unit.location %}
                         <td>{{ unit.location.name }}</td>
                         {% endif %}
                         <td>{{ unit.weight_length|default:"0.00" }}</td>

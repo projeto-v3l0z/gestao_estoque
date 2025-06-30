@@ -441,6 +441,7 @@ class Rooms(models.Model):
         return f'{self.building} - Sala {self.name}'
 
 
+
     class Meta:
         verbose_name_plural = "Salas"
         verbose_name = "Sala"
