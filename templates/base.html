@@ -69,7 +69,7 @@
             <div class="container d-flex align-items-center justify-content-between">
 
             <div class="logo">
-                <h1 class="text-light"><a href="index.html"><span>Gestão de Estoque</span></a></h1>
+                <h1 class="text-light"><a href="{% url 'inventory_management:index' %}"><span>Gestão de Estoque</span></a></h1>
             </div>
 
             <nav id="navbar" class="navbar">
@@ -88,7 +88,7 @@
                     <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:workspace' %}">Área de Transferências</a></li>
                     {% endif %}
                     {% if user|has_perm:"inventory_management.can_view_workspace_write_off" %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:workspace_write_off' %}">Área de Baixas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'inventory_management:workspace_write_off' %}">Área de Recomissionar</a></li>
                     {% endif %}
                     {% if user.is_staff and user|has_perm:"inventory_management.can_view_admin" %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'admin:index' %}">Administração</a></li>
