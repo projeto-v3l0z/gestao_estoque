@@ -25,6 +25,15 @@
                 {{ field }}
             </div>
             {% endfor %}
+            <!-- Filtro para Baixado -->
+            <div class="col-md-6 mb-3">
+                <label for="filter_baixado">Baixado</label>
+                <select name="filter_baixado" id="filter_baixado" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="sim" {% if request.GET.filter_baixado == "sim" %}selected{% endif %}>Sim</option>
+                    <option value="nao" {% if request.GET.filter_baixado == "nao" %}selected{% endif %}>Não</option>
+                </select>
+            </div>
         </div>
         <div class="row justify-content-center mt-3">
             <div class="col-md-3 text-center">
