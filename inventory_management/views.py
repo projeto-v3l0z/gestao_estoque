@@ -1241,6 +1241,7 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
         products = self.request.GET.getlist('product', '')  # Filtro por nome do produto
         location_id = self.request.GET.get('location')
         creation_date = self.request.GET.get('created_at') 
+        filter_baixado = self.request.GET.get('filter_baixado')  # Novo filtro
 
         if code_search:
             queryset = queryset.filter(code__icontains=code_search)
@@ -1254,6 +1255,12 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
         if creation_date:
             date = datetime.strptime(creation_date, '%Y-%m-%d').date()
             queryset = queryset.filter(created_at__gte=date).filter(write_off=False)
+
+        # Filtro por baixado/não baixado
+        if filter_baixado == "sim":
+            queryset = queryset.filter(write_off=True)
+        elif filter_baixado == "nao":
+            queryset = queryset.filter(write_off=False)
 
         return queryset.order_by('code')
 
