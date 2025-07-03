@@ -685,7 +685,7 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
         context['can_transfer'] = self.request.user.has_perm('inventory_management.add_stocktransfer')
         context['can_write_off'] = self.request.user.has_perm('inventory_management.add_write_off')
         context['write_off_destinations'] = WriteOffDestinations.objects.all()
-        context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa"])
+        context['storage_types'] = StorageType.objects.filter(name__icontains="depósito")
         context['shelves'] = Shelf.objects.all()
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
