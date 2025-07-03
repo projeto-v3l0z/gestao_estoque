@@ -1254,7 +1254,7 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
 
         if creation_date:
             date = datetime.strptime(creation_date, '%Y-%m-%d').date()
-            queryset = queryset.filter(created_at__gte=date).filter(write_off=False)
+            queryset = queryset.filter(created_at__date=date).filter(write_off=False)
 
         # Filtro por baixado/não baixado
         if filter_baixado == "sim":
