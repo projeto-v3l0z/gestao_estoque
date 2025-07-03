@@ -524,10 +524,11 @@ def generate_product_unit_qr_codes(request):
                 # Desenhar o QR Code
                 c.drawInlineImage(qr, x_coordinate, y_coordinate, width=qr_size, height=qr_size)
 
-                product_code = item.code
-                text_width = c.stringWidth(product_code, "VeraBd", 9)
+                # Código da unidade do produto (abaixo do QR Code)
+                product_code_metrag = f"{item.code} - {item.weight_length}"
+                text_width = c.stringWidth(product_code_metrag, "VeraBd", 9)
                 code_x = x_coordinate + (qr_size - text_width) / 2
-                c.drawString(code_x, y_coordinate - 5, product_code)
+                c.drawString(code_x, y_coordinate - 5, product_code_metrag)
 
                 # Código do produto (abaixo do QR Code)
                 product_code1 = item.product.code1
