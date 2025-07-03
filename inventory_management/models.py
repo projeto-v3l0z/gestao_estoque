@@ -543,6 +543,7 @@ class StorageType(models.Model):
     name = models.CharField("Nome do Local", max_length=100)
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
     is_store = models.BooleanField("É Loja?", default=False)
+    is_deposito = models.BooleanField("É Depósito?", default=False)  # Novo campo
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name=_('Criado por'), on_delete=models.CASCADE, related_name='destinations_created_by', null=True, editable=False)
     created_at = models.DateTimeField(_('Criado em'), auto_now_add=True, null=True, editable=False)
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name=_('Atualizado por'), on_delete=models.CASCADE, related_name='destinations_updated_by', null=True, editable=False)
@@ -573,4 +574,4 @@ class WorkSpace(models.Model):
         permissions = [
             ("can_view_workspace_write_off", "Can view workspace write off"),
         ]
-    
+

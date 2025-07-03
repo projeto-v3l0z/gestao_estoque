@@ -32,8 +32,11 @@
                         <select class="form-select" name="location" id="location" required>
                             <option value="">---------</option>
                             {% for location in storage_types %}
-                            <option value="{{ location.id }}" {% if workspace.storage_type.id == location.id %} selected
-                                {% endif %}>{{ location.name }}</option>
+                                {# Ajuste o campo abaixo para o nome correto do atributo que identifica depósito #}
+                                {% if location.type == "depósito" or location.is_deposito %}
+                                    <option value="{{ location.id }}" {% if workspace.storage_type.id == location.id %} selected
+                                        {% endif %}>{{ location.name }}</option>
+                                {% endif %}
                             {% endfor %}
                         </select>
 
