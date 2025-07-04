@@ -91,26 +91,31 @@
                             <td>{{ unit.product.name|title }}</td>
                             <td>{{ unit.quantity }}</td>
                             <td>
-                                {% if unit.qr_code_generated %}
-                                <span>sim</span>
+                                {% if unit.write_off %}
+                                    <span class="badge bg-danger">Sim</span>
                                 {% else %}
-                                <span>Não</span>
+                                    <span class="badge bg-success">Não</span>
                                 {% endif %}
                             </td>
-                            {% if unit.write_off %}
-                            <td>Sim</td>
-                            <td>Baixado</td>
-                            {% else %}
-                            <td>Não</td>
                             <td>
-                                {{ unit.location.name }}
-                                {% if unit.shelf %} - {{ unit.shelf }}
-                                {% elif unit.room %} - {{ unit.room }}
-                                {% elif unit.hall %} - {{ unit.hall }}
-                                {% elif unit.building %} - {{ unit.building }}
+                                {% if unit.qr_code_generated %}
+                                    <span class="badge bg-success">Sim</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Não</span>
                                 {% endif %}
                             </td>
-                            {% endif %}
+                            <td>
+                                {% if unit.write_off %}
+                                    <span class="text-muted">Baixado</span>
+                                {% else %}
+                                    {{ unit.location.name }}
+                                    {% if unit.shelf %} - {{ unit.shelf }}
+                                    {% elif unit.room %} - {{ unit.room }}
+                                    {% elif unit.hall %} - {{ unit.hall }}
+                                    {% elif unit.building %} - {{ unit.building }}
+                                    {% endif %}
+                                {% endif %}
+                            </td>
                             <td>{{ unit.weight_length|default:"0.00" }}</td>
                             <td>{{ unit.created_at|date:"d/m/Y" }}</td>
                             <td>
@@ -120,7 +125,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center">Nenhuma unidade encontrada.</td>
+                            <td colspan="10" class="text-center">Nenhuma unidade encontrada.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
