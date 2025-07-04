@@ -75,7 +75,7 @@
                             <th>Baixado</th>
                             <th>Qr code</th>
                             <th>Localização</th>
-                            <th>Metro</th>
+                            <th>Metros</th>
                             <th>Data Criação</th>
                             <th>Detalhes</th>
                         </tr>
@@ -99,10 +99,17 @@
                             </td>
                             {% if unit.write_off %}
                             <td>Sim</td>
-                            <td>-</td>
+                            <td>Baixado</td>
                             {% else %}
                             <td>Não</td>
-                            <td>{{ unit.location.name }}</td>
+                            <td>
+                                {{ unit.location.name }}
+                                {% if unit.shelf %} - {{ unit.shelf }}
+                                {% elif unit.room %} - {{ unit.room }}
+                                {% elif unit.hall %} - {{ unit.hall }}
+                                {% elif unit.building %} - {{ unit.building }}
+                                {% endif %}
+                            </td>
                             {% endif %}
                             <td>{{ unit.weight_length|default:"0.00" }}</td>
                             <td>{{ unit.created_at|date:"d/m/Y" }}</td>

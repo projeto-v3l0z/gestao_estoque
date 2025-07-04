@@ -66,18 +66,18 @@
             {% endif %}
             {% if write_offs %}
             <h2 class="mb-2 mt-4">Baixas</h2>
-            <table class="table table-striped">`
+            <table class="table table-striped">
                 <thead>
                     <tr>
                         <th scope="col">Data</th>
                         <th scope="col">Origem</th>
                         <th scope="col">Destino</th>
                         <th scope="col">Observações</th>
+                        <th scope="col">Destinatário</th>
                         <th scope="col">Responsável</th>
                     </tr>
                 </thead>
                 <tbody>
-                    
                     {% for write_off in write_offs %}
                     <tr>
                         <td>{{ write_off.write_off_date }}</td>
@@ -88,11 +88,8 @@
                             <td>{{ write_off.recomission_storage_type}} {% if write_off.recomission_shelf %} {{ write_off.recomission_shelf }} {% elif write_off.recomission_room %} {{write_off.recomission_room}} {% elif write_off.recomission_hall %} {{write_off.recomission_hall}} {% elif write_off.recomission_building %} {{write_off.recomission_building}} {% endif %} </td>
                         {% endif %}
                         <td>{{ write_off.observations }}</td>
-                        {% if write_off.created_by %}
-                            <td> {{ write_off.created_by }} </td>
-                        {% else %}
-                            <td>{{ write_off.write_off_destination}}</td>
-                        {% endif %}
+                        <td>{{ write_off.write_off_destination|default:"-" }}</td>
+                        <td>{{ write_off.created_by }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
