@@ -127,6 +127,7 @@
         <div id="qrcode" class="col-12 col-md-6 d-flex justify-content-center my-3"></div>
     </div>
     
+    {% if not object.is_divided %}
     {% if object.write_off %}
     <div class="column d-flex flex-column justify-content-center align-items-center mt-4">
         {% if user|has_perm:"inventory_management.add_write_off" and user|has_perm:"inventory_management.can_recomission" %}
@@ -330,6 +331,7 @@
                 </form>
             </div>      
         </div> 
+    {% endif %}
     {% endif %}
 </div>
 {% else %}

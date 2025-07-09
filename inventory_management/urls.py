@@ -16,11 +16,17 @@ urlpatterns = [
     path('enderecos/', AdressesView.as_view(), name='adresses'),
     path('enderecos/<slug:slug>/', AddressDetailView.as_view(), name='address_detail'),
     path('get-product-location-shelf/<uuid:product_unit_id>/', GetProductLocationShelfView.as_view(), name='get_product_location_shelf'),  path('generate_qr_codes', views.generate_qr_codes, name='generate_qr_codes'),
+
     path('area_trabalho/', WorkSpaceView.as_view(), name='workspace'),
     path('area_trabalho/<str:code>/delete/', delete_workspace, name='delete_workspace'),
+    
     path('area-trabalho-baixado/', WorkSpaceWriteOffView.as_view(), name='workspace_write_off'),
     path('area-trabalho-baixado/<str:code>/delete/', delete_workspace_write_off, name='delete_workspace_write_off'),
-      path('recomissionar/', recomission_product_units, name='recomission'),
+    path('recomissionar/', recomission_product_units, name='recomission'),
+
+    path('area-trabalho-dividido/', WorkSpaceDividedView.as_view(), name='workspace_divided'),
+    path('informacoes-unidade-produto/<str:product_unit_id>/', get_product_unit_info, name='product_unit_info'),
+
     path('get-building-properties/', views.get_building_properties, name='get_building_properties'),
     path('get-rooms/', views.get_rooms, name='get_rooms'),
     path('get-halls/', views.get_halls, name='get_halls'),

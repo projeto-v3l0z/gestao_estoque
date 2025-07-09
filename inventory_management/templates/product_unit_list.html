@@ -74,6 +74,8 @@
                             <th>Quantidade</th>
                             <th>Baixado</th>
                             <th>Qr code</th>
+                            <th>Dividido</th>
+                            <th>Unidade Fonte</th>
                             <th>Localização</th>
                             <th>Metros</th>
                             <th>Data Criação</th>
@@ -104,6 +106,21 @@
                                     <span class="badge bg-warning">Não</span>
                                 {% endif %}
                             </td>
+                            <td>
+                                {% if unit.is_divided %}
+                                    <span class="badge bg-info">Sim</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Não</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if unit.source_unit %}
+                                    <a href="{% url 'inventory_management:product_unit_detail' unit.source_unit.product.slug unit.source_unit.slug %}">
+                                        {{ unit.source_unit.code }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Nenhuma</span>
+                                {% endif %}
                             <td>
                                 {% if unit.write_off %}
                                     <span class="text-muted">Baixado</span>

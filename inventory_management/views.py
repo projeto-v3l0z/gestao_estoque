@@ -150,6 +150,54 @@ class ProductUnitDetailView(DetailView):
         if request.POST.get('transfer_stock') == 'True':
             return self.stock_transfer(request, product_unit)
 
+        # --- NOVO: Buscar produto pelo QR code (product_id) ---
+        if request.POST.get('product_id') and not request.POST.get('divisoes'):
+            product_id = request.POST.get('product_id')
+            product_unit = get_object_or_404(ProductUnit, code=product_id.upper())
+            produto = {
+                'nome': product_unit.product.name,
+                'codigo': product_unit.code,
+                'metragem': float(product_unit.weight_length) if hasattr(product_unit, 'weight_length') else None,
+            }
+            return JsonResponse({'success': True, 'produto': produto})
+
+        # --- NOVO: Dividir produto em novas unidades ---
+        if request.POST.get('codigo') and request.POST.get('divisoes'):
+            codigo = request.POST.get('codigo')
+            divisoes = request.POST.get('divisoes')
+            try:
+                divisoes = json.loads(divisoes)
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': 'Divisões inválidas.'}, status=400)
+            product_unit = get_object_or_404(ProductUnit, code=codigo.upper())
+            metragem_disponivel = float(product_unit.weight_length)
+            soma_divisoes = sum([float(x) for x in divisoes])
+            if soma_divisoes > metragem_disponivel:
+                return JsonResponse({'success': False, 'error': 'A soma das divisões excede a metragem disponível.'}, status=400)
+            # Marcar original como dividido e criar novas unidades
+            product_unit.is_divided = True
+            product_unit.save()
+            novas_unidades = []
+            for metragem in divisoes:
+                nova = ProductUnit.objects.create(
+                    product=product_unit.product,
+                    weight_length=metragem,
+                    location=product_unit.location,
+                    building=product_unit.building,
+                    room=product_unit.room,
+                    hall=product_unit.hall,
+                    shelf=product_unit.shelf,
+                    created_by=request.user,
+                    updated_by=request.user,
+                    is_divided=False,
+                    write_off=product_unit.write_off,
+                )
+                novas_unidades.append(nova.code)
+            # Atualiza metragem da original
+            product_unit.weight_length = metragem_disponivel - soma_divisoes
+            product_unit.save()
+            return JsonResponse({'success': True, 'novas_unidades': novas_unidades, 'reload': True})
+
         return redirect(product_unit.get_absolute_url())
 
     def write_off(self, request, product_unit):
@@ -753,6 +801,8 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
                     return JsonResponse({'error': 'Produto já está na sua área de trabalho', 'reload': True}, status=400)
                 if product.write_off is False:
                     return JsonResponse({'error': 'Esse produto não está baixado', 'reload': True}, status=400)
+                if product.is_divided:
+                    return JsonResponse({'error': 'Esse produto está dividido, não pode ser adicionado à área de trabalho', 'reload': True}, status=400)
 
                 WorkSpace.objects.create(user=request.user, product=product)
                 return JsonResponse({'success': 'Produto adicionado à área de trabalho', 'reload': True}, status=200)
@@ -824,6 +874,92 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
 
         print("Invalid action")  # Debug: Indicate invalid action
         return JsonResponse({'error': 'Ação inválida'}, status=400)
+    
+@method_decorator(login_required, name='dispatch')
+class WorkSpaceDividedView(PermissionRequiredMixin, TemplateView):
+    template_name = 'workspace_divided.html'
+    permission_required = 'inventory_management.view_workspace'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(user=self.request.user)
+    
+    def post(self, request, *args, **kwargs):
+        quantidades = request.POST.getlist('quantidade[]')
+        metragem_original = float(request.POST.get('metragem_original', 0))
+        prd = request.POST.get('prd')
+        
+        try:
+            soma = sum([float(q) for q in quantidades if q.strip()])
+            
+            product_unit = get_object_or_404(ProductUnit, code__icontains=prd)
+
+            if product_unit.is_divided:
+                messages.error(request, "Essa unidade de produto já está dividida.")
+                return self.get(request, *args, **kwargs)
+            
+            if product_unit.weight_length < soma:
+                messages.error(request, "A soma das unidades não pode ser maior que a metragem original.")
+                return self.get(request, *args, **kwargs)
+            
+            if product_unit.weight_length <= 0:
+                messages.error(request, "A metragem original deve ser maior que zero.")
+                return self.get(request, *args, **kwargs)
+            
+            # a soma tem que ser igual a metragem original
+            if soma != metragem_original:
+                messages.error(request, "A soma das quantidades deve ser igual à metragem original.")
+                return self.get(request, *args, **kwargs)
+            
+            for quantidade in quantidades:
+                if quantidade.strip():
+                    quantidade_float = float(quantidade)
+                    if quantidade_float <= 0:
+                        messages.error(request, "As quantidades devem ser maiores que zero.")
+                        return self.get(request, *args, **kwargs)
+                    
+                    if quantidade_float > product_unit.weight_length:
+                        messages.error(request, "A quantidade não pode ser maior que a metragem original.")
+                        return self.get(request, *args, **kwargs)
+                    
+                    nova_unidade = ProductUnit.objects.create(
+                        product=product_unit.product,
+                        weight_length=quantidade_float,
+                        location=product_unit.location,
+                        building=product_unit.building,
+                        room=product_unit.room,
+                        hall=product_unit.hall,
+                        shelf=product_unit.shelf,
+                        write_off=product_unit.write_off,
+                        source_unit=product_unit,
+                        created_by=request.user,
+                    )
+                    nova_unidade.save()
+
+            product_unit.is_divided = True
+            product_unit.save()
+            messages.success(request, "Unidade de produto dividida com sucesso.")
+            return redirect('inventory_management:workspace_divided')
+        except ValueError as e:
+            messages.error(request, f"Erro ao processar as quantidades: {str(e)}")
+            return self.get(request, *args, **kwargs)
+    
+def get_product_unit_info(request, product_unit_id):
+    try:
+        product_unit = ProductUnit.objects.exclude(is_divided=True).get(code__icontains=product_unit_id)
+        data = {
+            'code': product_unit.code,
+            'name': product_unit.product.name,
+            'weight_length': str(product_unit.weight_length),
+            'location': product_unit.location.name if product_unit.location else '',
+            'building': product_unit.building.name if product_unit.building else '',
+            'room': product_unit.room.name if product_unit.room else '',
+            'hall': product_unit.hall.name if product_unit.hall else '',
+            'shelf': product_unit.shelf.name if product_unit.shelf else '',
+        }
+        return JsonResponse(data, status=200)
+    except ProductUnit.DoesNotExist:
+        return JsonResponse({'error': 'Unidade de produto não encontrada'}, status=404)
 
 @method_decorator(login_required, name='dispatch')
 class WorkSpaceView(PermissionRequiredMixin ,ListView):
@@ -907,6 +1043,8 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
                     return JsonResponse({'error': 'Produto já está na sua área de trabalho', 'reload': True}, status=400)
                 if product.write_off:
                     return JsonResponse({'error': 'Esse produto está baixado', 'reload': True}, status=400)
+                if product.is_divided:
+                    return JsonResponse({'error': 'Esse produto está dividido, não pode ser adicionado à área de trabalho', 'reload': True}, status=400)
 
                 WorkSpace.objects.create(user=request.user, product=product)
                 return JsonResponse({'success': 'Produto adicionado à área de trabalho', 'reload': True}, status=200)
@@ -1263,7 +1401,7 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
         elif filter_baixado == "nao":
             queryset = queryset.filter(write_off=False)
 
-        return queryset.order_by('code')
+        return queryset.order_by('-code')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

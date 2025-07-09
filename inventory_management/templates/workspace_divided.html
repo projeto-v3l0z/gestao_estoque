@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load iam_tags static %}
+
+{% block content %}
+<div class="row justify-content-center py-4">
+    <div class="col-12">
+        {% if messages %}
+        <div class="col-12">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Fechar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <h1 class="mb-3">Divisão de Unidade de Produto</h1>
+        <div id="reader" class="qr-code-reader"></div>
+    </div>
+
+    <div class="col-12">
+        <div id="item-lido" class="mb-3"></div>
+
+        <div id="formulario-divisao" hidden>
+            <form id="divisao-form" class="card p-4 shadow-sm" method="post">
+                {% csrf_token %}
+                <input type="number" name="metragem_original" id="metragem_original" hidden>
+                <input type="text" name="prd" id="prd" hidden>
+                <h5 class="mb-3">Dividir Unidade</h5>
+                <div id="novas-unidades">
+                    <div class="form-row align-items-end unidade-item mb-2">
+                        <div class="col">
+                            <label>Quantidade da nova unidade:</label>
+                            <input type="number" name="quantidade[]" class="form-control" min="0.01" step="0.01"
+                                required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-3">
+                    <input type="button" class="btn btn-outline-secondary" id="adicionar-unidade"
+                        value="Adicionar Unidade">
+                    <input type="submit" class="btn btn-primary" value="Confirmar Divisão">
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+
+{% block extra_styles %}
+<style>
+    .qr-code-reader {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        /* Adicionando sombreamento */
+    }
+</style>
+{% endblock extra_styles %}
+
+{% block extra_scripts %}
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
+    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"></script>
+
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    let qrCodeReadingActive = true;
+
+    function onScanSuccess(decodedText, decodedResult) {
+        if (!qrCodeReadingActive) return;
+        qrCodeReadingActive = false;
+
+        const match = decodedText.match(/prd-(\d+)/i);
+        if (match) {
+            const product_id = match[1];
+
+            $.ajax({
+                type: 'GET',
+                url: '/informacoes-unidade-produto/prd-' + product_id + '/',
+                success: function (response) {
+                    carregarProduto(response)
+                },
+                error: function (xhr) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        alert(response.error || "Erro ao buscar produto.");
+                    } catch (e) {
+                        alert("Erro desconhecido.");
+                    }
+                    qrCodeReadingActive = true;
+                }
+            });
+        } else {
+            alert("Código inválido.");
+            qrCodeReadingActive = true;
+        }
+    }
+
+    function carregarProduto(produto) {
+        const div = document.getElementById("item-lido");
+        const divForm = document.getElementById("formulario-divisao");
+        const inputMetragemOriginal = document.getElementById("metragem_original");
+        const inputPrd = document.getElementById("prd");
+
+        divForm.hidden = false; // Exibe o formulário de divisão
+
+        div.innerHTML = `
+        <h2>Unidade Lida</h2>
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">${produto.name}</h5>
+                <p class="card-text">ID: ${produto.code}</p>
+                <p class="card-text">Quantidade: ${produto.weight_length}</p>
+            </div>
+        </div>
+    `;
+
+        inputMetragemOriginal.value = produto.weight_length;
+        inputPrd.value = produto.code;
+
+        qrCodeReadingActive = true;
+    }
+
+    function onScanFailure(error) {
+        console.warn(`Code scan error = ${error}`);
+    }
+
+    const html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader",
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        false
+    );
+
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+</script>
+<script>
+    document.getElementById('adicionar-unidade').addEventListener('click', function () {
+        const novasUnidades = document.getElementById('novas-unidades');
+        const unidadeDiv = document.createElement('div');
+        unidadeDiv.className = 'form-row align-items-end unidade-item mb-2';
+        unidadeDiv.innerHTML = `
+            <div class="col">
+                <label class="mb-1">Quantidade da nova unidade:</label>
+                <input type="number" name="quantidade[]" class="form-control" min="0.01" step="0.01" required>
+            </div>
+            <div class="col-auto mt-1">
+                <input type="button" class="btn btn-danger btn-sm remover-unidade" value="Remover">
+            </div>
+        `;
+        novasUnidades.appendChild(unidadeDiv);
+
+        unidadeDiv.querySelector('.remover-unidade').addEventListener('click', function () {
+            unidadeDiv.remove();
+        });
+    });
+
+    document.getElementById('divisao-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        // verificar se a metragem das novas unidades é válida, não pode passar do valor original
+        const unidades = document.querySelectorAll('input[name="quantidade[]"]');
+        let total = 0;
+        unidades.forEach(function (input) {
+            const value = parseFloat(input.value);
+            if (isNaN(value) || value <= 0) {
+                alert("Por favor, insira uma quantidade válida.");
+                return;
+            }
+            total += value;
+        });
+        const metragemOriginal = parseFloat(document.getElementById('metragem_original').value);
+        if (total > metragemOriginal) {
+            alert("A soma das novas unidades não pode exceder a metragem original.");
+            return;
+        }
+        this.submit();
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+    crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
+    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"></script>
+{% endblock extra_scripts %}
