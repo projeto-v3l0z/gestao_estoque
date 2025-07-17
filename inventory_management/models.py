@@ -574,5 +574,6 @@ class WorkSpace(models.Model):
         verbose_name = "Área de Trabalho"
         permissions = [
             ("can_view_workspace_write_off", "Can view workspace write off"),
+            ("can_view_workspace_divide", "Can view workspace divide"),
         ]
     
