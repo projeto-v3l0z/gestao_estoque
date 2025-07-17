@@ -94,7 +94,7 @@ class ProductUnitAdmin(admin.ModelAdmin):
     search_fields = ('product__name', 'location__name', 'id', 'code')
     list_filter = ('purchase_date', 'location', 'building', 'hall', 'room', 'shelf',
                    'write_off', 'was_written_off', 'qr_code_generated')
-    fields = ['product', 'quantity', 'weight_length', 'incoming']
+    fields = ['product', 'quantity', 'weight_length', 'incoming', 'is_divided']
     actions = [download_qr_codes, write_off_products, write_on_products]
     inlines = [ClothConsumptionInline, StockTransferInline]
     

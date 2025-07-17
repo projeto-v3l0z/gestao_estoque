@@ -133,6 +133,8 @@ class ProductUnit(models.Model):
     write_off = models.BooleanField("Está Baixado?", default=False)
     was_written_off = models.BooleanField("Foi baixado?", default=False)
     qr_code_generated = models.BooleanField("QR Code Gerado?", default=False) 
+    source_unit = models.ForeignKey('self', on_delete=models.CASCADE, verbose_name="Unidade Fonte", blank=True, null=True, related_name='source_units', editable=False)
+    is_divided = models.BooleanField("Unidade Dividida?", default=False)
     modified = models.DateTimeField("Modificado", auto_now=True)
     slug = models.SlugField("Slug", max_length=100, blank=True, null=True, editable=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name=_('Criado por'), on_delete=models.CASCADE, related_name='productunit_created_by', null=True, editable=False)
@@ -439,6 +441,7 @@ class Rooms(models.Model):
         if self.hall:
             return f'{self.hall} - Sala {self.name}'
         return f'{self.building} - Sala {self.name}'
+
 
 
     class Meta:

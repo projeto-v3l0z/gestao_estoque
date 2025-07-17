@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from .jazzmin import JAZZMIN_SETTINGS, JAZZMIN_UI_TWEAKS
+from django.contrib import messages
 
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -93,7 +94,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     },
-    'default': {
+    'mysql': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.environ.get("DB_NAME"),
         'USER': os.environ.get("DB_USER"),
@@ -102,6 +103,9 @@ DATABASES = {
         'PORT': os.environ.get("DB_PORT"),
     }
 }
+
+db_used = os.environ.get('DB_USED')
+DATABASES['default'] = DATABASES[db_used]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -165,3 +169,11 @@ JAZZMIN_SETTINGS = JAZZMIN_SETTINGS
 JAZZMIN_UI_TWEAKS = JAZZMIN_UI_TWEAKS
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 30000
+
+MESSAGE_TAGS = {
+    messages.DEBUG: 'secondary',
+    messages.INFO: 'info',
+    messages.SUCCESS: 'success',
+    messages.WARNING: 'warning',
+    messages.ERROR: 'danger',  # Bootstrap usa 'danger' para erros
+}

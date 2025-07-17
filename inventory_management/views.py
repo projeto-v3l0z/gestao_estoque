@@ -150,21 +150,84 @@ class ProductUnitDetailView(DetailView):
         if request.POST.get('transfer_stock') == 'True':
             return self.stock_transfer(request, product_unit)
 
+        # --- NOVO: Buscar produto pelo QR code (product_id) ---
+        if request.POST.get('product_id') and not request.POST.get('divisoes'):
+            product_id = request.POST.get('product_id')
+            product_unit = get_object_or_404(ProductUnit, code=product_id.upper())
+            produto = {
+                'nome': product_unit.product.name,
+                'codigo': product_unit.code,
+                'metragem': float(product_unit.weight_length) if hasattr(product_unit, 'weight_length') else None,
+            }
+            return JsonResponse({'success': True, 'produto': produto})
+
+        # --- NOVO: Dividir produto em novas unidades ---
+        if request.POST.get('codigo') and request.POST.get('divisoes'):
+            codigo = request.POST.get('codigo')
+            divisoes = request.POST.get('divisoes')
+            try:
+                divisoes = json.loads(divisoes)
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': 'Divisões inválidas.'}, status=400)
+            product_unit = get_object_or_404(ProductUnit, code=codigo.upper())
+            metragem_disponivel = float(product_unit.weight_length)
+            soma_divisoes = sum([float(x) for x in divisoes])
+            if soma_divisoes > metragem_disponivel:
+                return JsonResponse({'success': False, 'error': 'A soma das divisões excede a metragem disponível.'}, status=400)
+            # Marcar original como dividido e criar novas unidades
+            product_unit.is_divided = True
+            product_unit.save()
+            novas_unidades = []
+            for metragem in divisoes:
+                nova = ProductUnit.objects.create(
+                    product=product_unit.product,
+                    weight_length=metragem,
+                    location=product_unit.location,
+                    building=product_unit.building,
+                    room=product_unit.room,
+                    hall=product_unit.hall,
+                    shelf=product_unit.shelf,
+                    created_by=request.user,
+                    updated_by=request.user,
+                    is_divided=False,
+                    write_off=product_unit.write_off,
+                )
+                novas_unidades.append(nova.code)
+            # Atualiza metragem da original
+            product_unit.weight_length = metragem_disponivel - soma_divisoes
+            product_unit.save()
+            return JsonResponse({'success': True, 'novas_unidades': novas_unidades, 'reload': True})
+
         return redirect(product_unit.get_absolute_url())
 
     def write_off(self, request, product_unit):
+        # Salvar a localização original antes da baixa
+        original_location = product_unit.shelf if product_unit.shelf else product_unit.location
+        
+        # Marcar como baixado
         product_unit.write_off = True
+        
+        # Alterar a localização para "Baixa"
+        baixa_storage_type = StorageType.objects.get_or_create(name="Baixa")[0]
+        product_unit.location = baixa_storage_type
+        
+        # Limpar informações de localização física
+        product_unit.building = None
+        product_unit.hall = None
+        product_unit.room = None
+        product_unit.shelf = None
+        
         write_off_destination_id = request.POST.get('write_off_destination')
         write_off_destination = WriteOffDestinations.objects.get(pk=write_off_destination_id)
-        origin = product_unit.shelf if product_unit.shelf else product_unit.location
 
         Write_off.objects.create(
             product_unit=product_unit,
-            origin=origin,
-            storage_type=StorageType.objects.get_or_create(name="Baixa")[0],
+            origin=original_location,  # Usar a localização original
+            storage_type=baixa_storage_type,
             write_off_date=timezone.now(),
             observations="Baixa de produto",
-            write_off_destination=write_off_destination
+            write_off_destination=write_off_destination,
+            created_by=request.user,
         )
 
         product_unit.save()
@@ -509,10 +572,11 @@ def generate_product_unit_qr_codes(request):
                 # Desenhar o QR Code
                 c.drawInlineImage(qr, x_coordinate, y_coordinate, width=qr_size, height=qr_size)
 
-                product_code = item.code
-                text_width = c.stringWidth(product_code, "VeraBd", 9)
+                # Código da unidade do produto (abaixo do QR Code)
+                product_code_metrag = f"{item.code} - {item.weight_length}"
+                text_width = c.stringWidth(product_code_metrag, "VeraBd", 9)
                 code_x = x_coordinate + (qr_size - text_width) / 2
-                c.drawString(code_x, y_coordinate - 5, product_code)
+                c.drawString(code_x, y_coordinate - 5, product_code_metrag)
 
                 # Código do produto (abaixo do QR Code)
                 product_code1 = item.product.code1
@@ -670,7 +734,7 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
         context['can_transfer'] = self.request.user.has_perm('inventory_management.add_stocktransfer')
         context['can_write_off'] = self.request.user.has_perm('inventory_management.add_write_off')
         context['write_off_destinations'] = WriteOffDestinations.objects.all()
-        context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa"])
+        context['storage_types'] = StorageType.objects.filter(name__icontains="depósito")
         context['shelves'] = Shelf.objects.all()
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
@@ -694,17 +758,28 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
             if write_off_destination_id:
                 print("Processing write off")
                 write_off_destination = get_object_or_404(WriteOffDestinations, pk=write_off_destination_id)
+                baixa_storage_type = StorageType.objects.get_or_create(name="Baixa")[0]
+                
                 for product in WorkSpace.objects.filter(user=request.user):
                     product_unit = product.product
+                    
+                    # Salvar localização original
+                    origin = product_unit.shelf if product_unit.shelf else product_unit.location
+                    
+                    # Marcar como baixado e alterar localização
                     product_unit.write_off = True
+                    product_unit.location = baixa_storage_type
+                    product_unit.building = None
+                    product_unit.hall = None
+                    product_unit.room = None
+                    product_unit.shelf = None
                     product_unit.updated_by = request.user
                     product_unit.save()
 
-                    origin = product_unit.shelf if product_unit.shelf else product_unit.location
                     Write_off.objects.create(
                         product_unit=product_unit,
-                        origin=origin,
-                        storage_type=StorageType.objects.get_or_create(name="Baixa")[0],
+                        origin=origin,  # Localização original
+                        storage_type=baixa_storage_type,
                         write_off_date=timezone.now(),
                         observations="Baixa de produto",
                         write_off_destination=write_off_destination,
@@ -726,6 +801,8 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
                     return JsonResponse({'error': 'Produto já está na sua área de trabalho', 'reload': True}, status=400)
                 if product.write_off is False:
                     return JsonResponse({'error': 'Esse produto não está baixado', 'reload': True}, status=400)
+                if product.is_divided:
+                    return JsonResponse({'error': 'Esse produto está dividido, não pode ser adicionado à área de trabalho', 'reload': True}, status=400)
 
                 WorkSpace.objects.create(user=request.user, product=product)
                 return JsonResponse({'success': 'Produto adicionado à área de trabalho', 'reload': True}, status=200)
@@ -797,6 +874,92 @@ class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
 
         print("Invalid action")  # Debug: Indicate invalid action
         return JsonResponse({'error': 'Ação inválida'}, status=400)
+    
+@method_decorator(login_required, name='dispatch')
+class WorkSpaceDividedView(PermissionRequiredMixin, TemplateView):
+    template_name = 'workspace_divided.html'
+    permission_required = 'inventory_management.view_workspace'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(user=self.request.user)
+    
+    def post(self, request, *args, **kwargs):
+        quantidades = request.POST.getlist('quantidade[]')
+        metragem_original = float(request.POST.get('metragem_original', 0))
+        prd = request.POST.get('prd')
+        
+        try:
+            soma = sum([float(q) for q in quantidades if q.strip()])
+            
+            product_unit = get_object_or_404(ProductUnit, code__icontains=prd)
+
+            if product_unit.is_divided:
+                messages.error(request, "Essa unidade de produto já está dividida.")
+                return self.get(request, *args, **kwargs)
+            
+            if product_unit.weight_length < soma:
+                messages.error(request, "A soma das unidades não pode ser maior que a metragem original.")
+                return self.get(request, *args, **kwargs)
+            
+            if product_unit.weight_length <= 0:
+                messages.error(request, "A metragem original deve ser maior que zero.")
+                return self.get(request, *args, **kwargs)
+            
+            # a soma tem que ser igual a metragem original
+            if soma != metragem_original:
+                messages.error(request, "A soma das quantidades deve ser igual à metragem original.")
+                return self.get(request, *args, **kwargs)
+            
+            for quantidade in quantidades:
+                if quantidade.strip():
+                    quantidade_float = float(quantidade)
+                    if quantidade_float <= 0:
+                        messages.error(request, "As quantidades devem ser maiores que zero.")
+                        return self.get(request, *args, **kwargs)
+                    
+                    if quantidade_float > product_unit.weight_length:
+                        messages.error(request, "A quantidade não pode ser maior que a metragem original.")
+                        return self.get(request, *args, **kwargs)
+                    
+                    nova_unidade = ProductUnit.objects.create(
+                        product=product_unit.product,
+                        weight_length=quantidade_float,
+                        location=product_unit.location,
+                        building=product_unit.building,
+                        room=product_unit.room,
+                        hall=product_unit.hall,
+                        shelf=product_unit.shelf,
+                        write_off=product_unit.write_off,
+                        source_unit=product_unit,
+                        created_by=request.user,
+                    )
+                    nova_unidade.save()
+
+            product_unit.is_divided = True
+            product_unit.save()
+            messages.success(request, "Unidade de produto dividida com sucesso.")
+            return redirect('inventory_management:workspace_divided')
+        except ValueError as e:
+            messages.error(request, f"Erro ao processar as quantidades: {str(e)}")
+            return self.get(request, *args, **kwargs)
+    
+def get_product_unit_info(request, product_unit_id):
+    try:
+        product_unit = ProductUnit.objects.exclude(is_divided=True).get(code__icontains=product_unit_id)
+        data = {
+            'code': product_unit.code,
+            'name': product_unit.product.name,
+            'weight_length': str(product_unit.weight_length),
+            'location': product_unit.location.name if product_unit.location else '',
+            'building': product_unit.building.name if product_unit.building else '',
+            'room': product_unit.room.name if product_unit.room else '',
+            'hall': product_unit.hall.name if product_unit.hall else '',
+            'shelf': product_unit.shelf.name if product_unit.shelf else '',
+        }
+        return JsonResponse(data, status=200)
+    except ProductUnit.DoesNotExist:
+        return JsonResponse({'error': 'Unidade de produto não encontrada'}, status=404)
 
 @method_decorator(login_required, name='dispatch')
 class WorkSpaceView(PermissionRequiredMixin ,ListView):
@@ -837,17 +1000,28 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
             if write_off_destination_id:
                 print("Processing write off")
                 write_off_destination = get_object_or_404(WriteOffDestinations, pk=write_off_destination_id)
+                baixa_storage_type = StorageType.objects.get_or_create(name="Baixa")[0]
+                
                 for product in WorkSpace.objects.filter(user=request.user):
                     product_unit = product.product
+                    
+                    # Salvar localização original
+                    origin = product_unit.shelf if product_unit.shelf else product_unit.location
+                    
+                    # Marcar como baixado e alterar localização
                     product_unit.write_off = True
+                    product_unit.location = baixa_storage_type
+                    product_unit.building = None
+                    product_unit.hall = None
+                    product_unit.room = None
+                    product_unit.shelf = None
                     product_unit.updated_by = request.user
                     product_unit.save()
 
-                    origin = product_unit.shelf if product_unit.shelf else product_unit.location
                     Write_off.objects.create(
                         product_unit=product_unit,
-                        origin=origin,
-                        storage_type=StorageType.objects.get_or_create(name="Baixa")[0],
+                        origin=origin,  # Localização original
+                        storage_type=baixa_storage_type,
                         write_off_date=timezone.now(),
                         observations="Baixa de produto",
                         write_off_destination=write_off_destination,
@@ -869,6 +1043,8 @@ class WorkSpaceView(PermissionRequiredMixin ,ListView):
                     return JsonResponse({'error': 'Produto já está na sua área de trabalho', 'reload': True}, status=400)
                 if product.write_off:
                     return JsonResponse({'error': 'Esse produto está baixado', 'reload': True}, status=400)
+                if product.is_divided:
+                    return JsonResponse({'error': 'Esse produto está dividido, não pode ser adicionado à área de trabalho', 'reload': True}, status=400)
 
                 WorkSpace.objects.create(user=request.user, product=product)
                 return JsonResponse({'success': 'Produto adicionado à área de trabalho', 'reload': True}, status=200)
@@ -1204,6 +1380,7 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
         products = self.request.GET.getlist('product', '')  # Filtro por nome do produto
         location_id = self.request.GET.get('location')
         creation_date = self.request.GET.get('created_at') 
+        filter_baixado = self.request.GET.get('filter_baixado')  # Novo filtro
 
         if code_search:
             queryset = queryset.filter(code__icontains=code_search)
@@ -1216,9 +1393,15 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
 
         if creation_date:
             date = datetime.strptime(creation_date, '%Y-%m-%d').date()
-            queryset = queryset.filter(created_at__gte=date).filter(write_off=False)
+            queryset = queryset.filter(created_at__date=date).filter(write_off=False)
 
-        return queryset.order_by('code')
+        # Filtro por baixado/não baixado
+        if filter_baixado == "sim":
+            queryset = queryset.filter(write_off=True)
+        elif filter_baixado == "nao":
+            queryset = queryset.filter(write_off=False)
+
+        return queryset.order_by('-code')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1236,7 +1419,7 @@ class ProductAutoComplete(View):
 def recomission_product_units(request):
     if request.method == 'POST':
         try:
-            data = json.loads(request.POST.get("recomission", "[]"))  # Recebe os itens como JSON
+            data = json.loads(request.POST.get("recomission", "[]"))
             if not data:
                 return JsonResponse({"success": False, "error": "Nenhum item recebido"}, status=400)
 
@@ -1244,19 +1427,49 @@ def recomission_product_units(request):
                 product_unit_id = item.get("id")
                 quantity = float(item.get("quantity", 0))
                 storage_type_id = item.get("storageType", "")
+                building_id = item.get("building")
+                hall_id = item.get("hall") 
+                room_id = item.get("room")
+                shelf_id = item.get("shelf")
 
                 product_unit = get_object_or_404(ProductUnit, id=product_unit_id)
                 storage_type = get_object_or_404(StorageType, id=storage_type_id)
+                baixa_storage_type = StorageType.objects.get_or_create(name="Baixa")[0]
                 
+               
                 product_unit.write_off = False
                 product_unit.location = storage_type
+                
+                
+                if storage_type.is_store:
+                    product_unit.building_id = building_id if building_id else None
+                    product_unit.hall_id = hall_id if hall_id else None
+                    product_unit.room_id = room_id if room_id else None
+                    product_unit.shelf_id = shelf_id if shelf_id else None
+                else:
+                    product_unit.building = None
+                    product_unit.hall = None
+                    product_unit.room = None
+                    product_unit.shelf = None
+                
                 product_unit.updated_by = request.user
                 product_unit.save()
 
+                
+                building = Building.objects.filter(pk=building_id).first() if building_id else None
+                hall = Hall.objects.filter(pk=hall_id).first() if hall_id else None
+                room = Rooms.objects.filter(pk=room_id).first() if room_id else None
+                shelf = Shelf.objects.filter(pk=shelf_id).first() if shelf_id else None
+
+                
                 Write_off.objects.create(
                     product_unit=product_unit,
-                    origin=storage_type,
-                    recomission_storage_type=storage_type,
+                    origin=baixa_storage_type,  
+                    recomission_storage_type=storage_type,  
+                    recomission_building=building,
+                    recomission_hall=hall,
+                    recomission_room=room,
+                    recomission_shelf=shelf,
                     write_off_date=timezone.now(),
                     observations="Recomissionamento de produto",
                     storage_type=None,
@@ -1264,10 +1477,12 @@ def recomission_product_units(request):
                     created_by=request.user,
                 )
 
-                ClothConsumption.objects.create(
-                    product_unit=product_unit,
-                    remainder=quantity
-                )
+               
+                if quantity > 0:
+                    ClothConsumption.objects.create(
+                        product_unit=product_unit,
+                        remainder=quantity
+                    )
 
             WorkSpace.objects.filter(user=request.user).delete()
             return JsonResponse({"success": True, "reload": True})
