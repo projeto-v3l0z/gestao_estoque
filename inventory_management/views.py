@@ -37,20 +37,6 @@ from django.db.models import Q
 from django_select2.views import AutoResponseView
 
 
-def get_valid_user(request_user):
-    """
-    Função helper para validar se um usuário existe e é válido.
-    Retorna o usuário se válido, None caso contrário.
-    """
-    try:
-        if request_user and hasattr(request_user, 'is_active') and request_user.is_active:
-            return request_user
-        else:
-            return None
-    except:
-        return None
-
-
 class IndexView(LoginRequiredMixin, TemplateView):
     template_name = 'index.html'
 
@@ -427,13 +413,10 @@ class ProductCreateView(PermissionRequiredMixin, CreateView):
     success_url = reverse_lazy('inventory_management:product_list')  
 
     def form_valid(self, form):
-        # Verificar se o usuário existe e é válido antes de usar
-        valid_user = get_valid_user(self.request.user)
-        
-        form.instance.created_by = valid_user
-        form.instance.updated_by = valid_user
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
 
-        return super().form_valid(form)
+        return super().form_valid(form)  
 
 class ProductUpdateView(UpdateView):
     model = Product
@@ -447,11 +430,7 @@ class ProductUpdateView(UpdateView):
     def form_valid(self, form):
         # Salvando o produto com os novos dados
         product = form.save(commit=False)
-        
-        # Verificar se o usuário existe e é válido antes de usar
-        valid_user = get_valid_user(self.request.user)
-        product.updated_by = valid_user
-        
+        product.updated_by = self.request.user  # Atualiza o usuário que fez a alteração
         product.save()
 
         # Redireciona para a página de detalhes do produto após a edição
