@@ -11,7 +11,26 @@ from .models import *
 def create_or_update_products_with_color(sender, instance, created, **kwargs):
     # if created:
     for product in Product.objects.filter(name__contains="liso", color__isnull=True):
-        Product.objects.create(name=f"{product.name.capitalize()} {instance.name}", description=product.description, price=product.price, measure=product.measure, width=product.width, composition=product.composition, image=product.image, code1=product.code1, code2=product.code2, ncm=product.ncm, color=instance, pattern=product.pattern, created_by=product.created_by, updated_by=product.updated_by)
+        # Verificar se o usuário existe antes de usar
+        created_by = product.created_by if product.created_by and product.created_by.is_active else None
+        updated_by = product.updated_by if product.updated_by and product.updated_by.is_active else None
+        
+        Product.objects.create(
+            name=f"{product.name.capitalize()} {instance.name}", 
+            description=product.description, 
+            price=product.price, 
+            measure=product.measure, 
+            width=product.width, 
+            composition=product.composition, 
+            image=product.image, 
+            code1=product.code1, 
+            code2=product.code2, 
+            ncm=product.ncm, 
+            color=instance, 
+            pattern=product.pattern, 
+            created_by=created_by,  # Pode ser None se usuário não existir
+            updated_by=updated_by   # Pode ser None se usuário não existir
+        )
     # else:
     #     Product.objects.filter(color=instance).delete()
 
@@ -20,7 +39,26 @@ def create_or_update_products_with_color(sender, instance, created, **kwargs):
 def create_or_update_products_with_pattern(sender, instance, created, **kwargs):
     # if created:
     for product in Product.objects.filter(name__contains="estampado", pattern__isnull=True):
-        Product.objects.create(name=f"{product.name.capitalize()} {instance.name}", description=product.description, price=product.price, measure=product.measure, width=product.width, composition=product.composition, image=product.image, code1=product.code1, code2=product.code2, ncm=product.ncm, color=product.color, pattern=instance, created_by=product.created_by, updated_by=product.updated_by)
+        # Verificar se o usuário existe antes de usar
+        created_by = product.created_by if product.created_by and product.created_by.is_active else None
+        updated_by = product.updated_by if product.updated_by and product.updated_by.is_active else None
+        
+        Product.objects.create(
+            name=f"{product.name.capitalize()} {instance.name}", 
+            description=product.description, 
+            price=product.price, 
+            measure=product.measure, 
+            width=product.width, 
+            composition=product.composition, 
+            image=product.image, 
+            code1=product.code1, 
+            code2=product.code2, 
+            ncm=product.ncm, 
+            color=product.color, 
+            pattern=instance, 
+            created_by=created_by,  # Pode ser None se usuário não existir
+            updated_by=updated_by   # Pode ser None se usuário não existir
+        )
     # else:
     #     Product.objects.filter(pattern=instance).delete()
         
@@ -33,6 +71,10 @@ from django.db.models import signals
 @receiver(post_save, sender=Product)
 def update_or_create_related_products(sender, instance, created, **kwargs):
     # Define os dados comuns para variações
+    # Verificar se o usuário existe antes de usar
+    created_by = instance.created_by if instance.created_by and instance.created_by.is_active else None
+    updated_by = instance.updated_by if instance.updated_by and instance.updated_by.is_active else None
+    
     product_data = {
         "description": instance.description,
         "price": instance.price,
@@ -41,8 +83,8 @@ def update_or_create_related_products(sender, instance, created, **kwargs):
         "composition": instance.composition,
         "image": instance.image,
         "ncm": instance.ncm,
-        "created_by": instance.created_by,
-        "updated_by": instance.updated_by,
+        "created_by": created_by,  # Pode ser None se usuário não existir
+        "updated_by": updated_by,  # Pode ser None se usuário não existir
     }
 
     if created:
