@@ -218,13 +218,9 @@ class ProductUnitAdmin(admin.ModelAdmin):
             return []
         
     def save_model(self, request, obj, form, change):
-        # Usar o middleware para capturar o usuário atual
-        from .middleware import get_current_user
-        current_user = get_current_user()
-        
-        if not change:  # Novo produto
-            obj.created_by = current_user
-        obj.updated_by = current_user
+        if not change:  
+            obj.created_by = request.user
+        obj.updated_by = request.user
         
         super().save_model(request, obj, form, change)
 

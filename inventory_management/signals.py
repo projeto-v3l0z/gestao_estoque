@@ -5,62 +5,13 @@ from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.db import transaction
-from django.utils import timezone
-from django.contrib.auth import get_user_model
 from .models import *
-
-User = get_user_model()
-
-# Signal para preencher automaticamente os campos de usuário e data
-@receiver(pre_save, sender=Product)
-def set_product_user_fields(sender, instance, **kwargs):
-    """
-    Preenche automaticamente os campos created_by, updated_by, created_at, updated_at
-    """
-    if not instance.pk:  # Novo produto (criação)
-        if not instance.created_at:
-            instance.created_at = timezone.now()
-    
-    # Sempre atualizar updated_at
-    instance.updated_at = timezone.now()
-
 
 @receiver(post_save, sender=Color)
 def create_or_update_products_with_color(sender, instance, created, **kwargs):
     # if created:
     for product in Product.objects.filter(name__contains="liso", color__isnull=True):
-        # Verificar se o usuário existe e é válido antes de usar
-        created_by = None
-        updated_by = None
-        
-        try:
-            if product.created_by and hasattr(product.created_by, 'is_active') and product.created_by.is_active:
-                created_by = product.created_by
-        except:
-            created_by = None
-            
-        try:
-            if product.updated_by and hasattr(product.updated_by, 'is_active') and product.updated_by.is_active:
-                updated_by = product.updated_by
-        except:
-            updated_by = None
-        
-        Product.objects.create(
-            name=f"{product.name.capitalize()} {instance.name}", 
-            description=product.description, 
-            price=product.price, 
-            measure=product.measure, 
-            width=product.width, 
-            composition=product.composition, 
-            image=product.image, 
-            code1=product.code1, 
-            code2=product.code2, 
-            ncm=product.ncm, 
-            color=instance, 
-            pattern=product.pattern, 
-            created_by=created_by,  # Pode ser None se usuário não existir
-            updated_by=updated_by   # Pode ser None se usuário não existir
-        )
+        Product.objects.create(name=f"{product.name.capitalize()} {instance.name}", description=product.description, price=product.price, measure=product.measure, width=product.width, composition=product.composition, image=product.image, code1=product.code1, code2=product.code2, ncm=product.ncm, color=instance, pattern=product.pattern, created_by=product.created_by, updated_by=product.updated_by)
     # else:
     #     Product.objects.filter(color=instance).delete()
 
@@ -69,38 +20,7 @@ def create_or_update_products_with_color(sender, instance, created, **kwargs):
 def create_or_update_products_with_pattern(sender, instance, created, **kwargs):
     # if created:
     for product in Product.objects.filter(name__contains="estampado", pattern__isnull=True):
-        # Verificar se o usuário existe e é válido antes de usar
-        created_by = None
-        updated_by = None
-        
-        try:
-            if product.created_by and hasattr(product.created_by, 'is_active') and product.created_by.is_active:
-                created_by = product.created_by
-        except:
-            created_by = None
-            
-        try:
-            if product.updated_by and hasattr(product.updated_by, 'is_active') and product.updated_by.is_active:
-                updated_by = product.updated_by
-        except:
-            updated_by = None
-        
-        Product.objects.create(
-            name=f"{product.name.capitalize()} {instance.name}", 
-            description=product.description, 
-            price=product.price, 
-            measure=product.measure, 
-            width=product.width, 
-            composition=product.composition, 
-            image=product.image, 
-            code1=product.code1, 
-            code2=product.code2, 
-            ncm=product.ncm, 
-            color=product.color, 
-            pattern=instance, 
-            created_by=created_by,  # Pode ser None se usuário não existir
-            updated_by=updated_by   # Pode ser None se usuário não existir
-        )
+        Product.objects.create(name=f"{product.name.capitalize()} {instance.name}", description=product.description, price=product.price, measure=product.measure, width=product.width, composition=product.composition, image=product.image, code1=product.code1, code2=product.code2, ncm=product.ncm, color=product.color, pattern=instance, created_by=product.created_by, updated_by=product.updated_by)
     # else:
     #     Product.objects.filter(pattern=instance).delete()
         
@@ -113,22 +33,6 @@ from django.db.models import signals
 @receiver(post_save, sender=Product)
 def update_or_create_related_products(sender, instance, created, **kwargs):
     # Define os dados comuns para variações
-    # Verificar se o usuário existe e é válido antes de usar
-    created_by = None
-    updated_by = None
-    
-    try:
-        if instance.created_by and hasattr(instance.created_by, 'is_active') and instance.created_by.is_active:
-            created_by = instance.created_by
-    except:
-        created_by = None
-        
-    try:
-        if instance.updated_by and hasattr(instance.updated_by, 'is_active') and instance.updated_by.is_active:
-            updated_by = instance.updated_by
-    except:
-        updated_by = None
-    
     product_data = {
         "description": instance.description,
         "price": instance.price,
@@ -137,8 +41,8 @@ def update_or_create_related_products(sender, instance, created, **kwargs):
         "composition": instance.composition,
         "image": instance.image,
         "ncm": instance.ncm,
-        "created_by": created_by,  # Pode ser None se usuário não existir
-        "updated_by": updated_by,  # Pode ser None se usuário não existir
+        "created_by": instance.created_by,
+        "updated_by": instance.updated_by,
     }
 
     if created:
