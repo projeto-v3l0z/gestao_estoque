@@ -409,7 +409,7 @@ class ProductCreateView(PermissionRequiredMixin, CreateView):
     model = Product
     template_name = 'product_create.html'
     form_class =ProductCreateForm
-    permission_required = 'inventory_management.add_product_create'
+    permission_required = 'inventory_management.add_product'
     success_url = reverse_lazy('inventory_management:product_list')  
 
     def form_valid(self, form):
