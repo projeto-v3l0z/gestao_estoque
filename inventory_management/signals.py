@@ -5,7 +5,25 @@ from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.db import transaction
+from django.utils import timezone
+from django.contrib.auth import get_user_model
 from .models import *
+
+User = get_user_model()
+
+# Signal para preencher automaticamente os campos de usuário e data
+@receiver(pre_save, sender=Product)
+def set_product_user_fields(sender, instance, **kwargs):
+    """
+    Preenche automaticamente os campos created_by, updated_by, created_at, updated_at
+    """
+    if not instance.pk:  # Novo produto (criação)
+        if not instance.created_at:
+            instance.created_at = timezone.now()
+    
+    # Sempre atualizar updated_at
+    instance.updated_at = timezone.now()
+
 
 @receiver(post_save, sender=Color)
 def create_or_update_products_with_color(sender, instance, created, **kwargs):
