@@ -11,9 +11,21 @@ from .models import *
 def create_or_update_products_with_color(sender, instance, created, **kwargs):
     # if created:
     for product in Product.objects.filter(name__contains="liso", color__isnull=True):
-        # Verificar se o usuário existe antes de usar
-        created_by = product.created_by if product.created_by and product.created_by.is_active else None
-        updated_by = product.updated_by if product.updated_by and product.updated_by.is_active else None
+        # Verificar se o usuário existe e é válido antes de usar
+        created_by = None
+        updated_by = None
+        
+        try:
+            if product.created_by and hasattr(product.created_by, 'is_active') and product.created_by.is_active:
+                created_by = product.created_by
+        except:
+            created_by = None
+            
+        try:
+            if product.updated_by and hasattr(product.updated_by, 'is_active') and product.updated_by.is_active:
+                updated_by = product.updated_by
+        except:
+            updated_by = None
         
         Product.objects.create(
             name=f"{product.name.capitalize()} {instance.name}", 
@@ -39,9 +51,21 @@ def create_or_update_products_with_color(sender, instance, created, **kwargs):
 def create_or_update_products_with_pattern(sender, instance, created, **kwargs):
     # if created:
     for product in Product.objects.filter(name__contains="estampado", pattern__isnull=True):
-        # Verificar se o usuário existe antes de usar
-        created_by = product.created_by if product.created_by and product.created_by.is_active else None
-        updated_by = product.updated_by if product.updated_by and product.updated_by.is_active else None
+        # Verificar se o usuário existe e é válido antes de usar
+        created_by = None
+        updated_by = None
+        
+        try:
+            if product.created_by and hasattr(product.created_by, 'is_active') and product.created_by.is_active:
+                created_by = product.created_by
+        except:
+            created_by = None
+            
+        try:
+            if product.updated_by and hasattr(product.updated_by, 'is_active') and product.updated_by.is_active:
+                updated_by = product.updated_by
+        except:
+            updated_by = None
         
         Product.objects.create(
             name=f"{product.name.capitalize()} {instance.name}", 
@@ -71,9 +95,21 @@ from django.db.models import signals
 @receiver(post_save, sender=Product)
 def update_or_create_related_products(sender, instance, created, **kwargs):
     # Define os dados comuns para variações
-    # Verificar se o usuário existe antes de usar
-    created_by = instance.created_by if instance.created_by and instance.created_by.is_active else None
-    updated_by = instance.updated_by if instance.updated_by and instance.updated_by.is_active else None
+    # Verificar se o usuário existe e é válido antes de usar
+    created_by = None
+    updated_by = None
+    
+    try:
+        if instance.created_by and hasattr(instance.created_by, 'is_active') and instance.created_by.is_active:
+            created_by = instance.created_by
+    except:
+        created_by = None
+        
+    try:
+        if instance.updated_by and hasattr(instance.updated_by, 'is_active') and instance.updated_by.is_active:
+            updated_by = instance.updated_by
+    except:
+        updated_by = None
     
     product_data = {
         "description": instance.description,
