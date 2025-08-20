@@ -171,14 +171,13 @@ class ProductUnit(models.Model):
                         weight_length=self.weight_length,
                         incoming=self.incoming,
                         write_off=self.write_off,
-                        created_by=self.created_by,
-                        updated_by=self.updated_by,
                         building=self.building,
                         hall=self.hall,
                         room=self.room,
                         shelf=self.shelf,
                         quantity=1  # As novas unidades sempre terão quantidade 1
                     )
+                    # Os campos created_by e updated_by serão preenchidos automaticamente pelo signal
                     new_unit.save()  # Chama `save()`, que gera o código automaticamente
 
             # Atualiza o objeto original para garantir que quantity=1

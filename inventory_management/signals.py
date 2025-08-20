@@ -5,22 +5,56 @@ from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.db import transaction
+from django.utils import timezone
+from django.contrib.auth.models import AnonymousUser
 from .models import *
+
+
 
 @receiver(post_save, sender=Color)
 def create_or_update_products_with_color(sender, instance, created, **kwargs):
     # if created:
     for product in Product.objects.filter(name__contains="liso", color__isnull=True):
-        Product.objects.create(name=f"{product.name.capitalize()} {instance.name}", description=product.description, price=product.price, measure=product.measure, width=product.width, composition=product.composition, image=product.image, code1=product.code1, code2=product.code2, ncm=product.ncm, color=instance, pattern=product.pattern, created_by=product.created_by, updated_by=product.updated_by)
+        # Os campos created_by e updated_by serão preenchidos automaticamente pelo signal genérico
+        Product.objects.create(
+            name=f"{product.name.capitalize()} {instance.name}", 
+            description=product.description, 
+            price=product.price, 
+            measure=product.measure, 
+            width=product.width, 
+            composition=product.composition, 
+            image=product.image, 
+            code1=product.code1, 
+            code2=product.code2, 
+            ncm=product.ncm, 
+            color=instance, 
+            pattern=product.pattern
+        )
     # else:
     #     Product.objects.filter(color=instance).delete()
+
+
 
 
 @receiver(post_save, sender=Pattern)
 def create_or_update_products_with_pattern(sender, instance, created, **kwargs):
     # if created:
     for product in Product.objects.filter(name__contains="estampado", pattern__isnull=True):
-        Product.objects.create(name=f"{product.name.capitalize()} {instance.name}", description=product.description, price=product.price, measure=product.measure, width=product.width, composition=product.composition, image=product.image, code1=product.code1, code2=product.code2, ncm=product.ncm, color=product.color, pattern=instance, created_by=product.created_by, updated_by=product.updated_by)
+        # Os campos created_by e updated_by serão preenchidos automaticamente pelo signal genérico
+        Product.objects.create(
+            name=f"{product.name.capitalize()} {instance.name}", 
+            description=product.description, 
+            price=product.price, 
+            measure=product.measure, 
+            width=product.width, 
+            composition=product.composition, 
+            image=product.image, 
+            code1=product.code1, 
+            code2=product.code2, 
+            ncm=product.ncm, 
+            color=product.color, 
+            pattern=instance
+        )
     # else:
     #     Product.objects.filter(pattern=instance).delete()
         
@@ -41,8 +75,7 @@ def update_or_create_related_products(sender, instance, created, **kwargs):
         "composition": instance.composition,
         "image": instance.image,
         "ncm": instance.ncm,
-        "created_by": instance.created_by,
-        "updated_by": instance.updated_by,
+        # Os campos created_by e updated_by serão preenchidos automaticamente pelo signal genérico
     }
 
     if created:
@@ -101,8 +134,41 @@ def delete_related_products(sender, instance, **kwargs):
         ).delete()
 
 
+
+
 @receiver(pre_save, sender=Product)
 def validate_unique_name(sender, instance, **kwargs):
     if not instance.pk:
         if Product.objects.filter(name__iexact=instance.name).exists():
             raise ValidationError("Esse nome já está em uso.")
+
+# Signal genérico para preencher automaticamente os campos de usuário para todos os modelos
+@receiver(pre_save)
+def set_user_fields_for_all_models(sender, instance, **kwargs):
+    """
+    Signal genérico que preenche automaticamente os campos created_by, updated_by, 
+    created_at, updated_at para todos os modelos que os possuem
+    """
+    # Verifica se o modelo tem os campos necessários
+    if not hasattr(instance, 'created_by') or not hasattr(instance, 'updated_by'):
+        return
+    
+    # Verifica se é um modelo do Django (não um proxy ou outro tipo)
+    if not hasattr(instance, '_meta') or not hasattr(instance._meta, 'model_name'):
+        return
+    
+    from .middleware import get_current_user
+    
+    current_user = get_current_user()
+    
+    if not instance.pk:  # Nova instância (criação)
+        if hasattr(instance, 'created_at') and not instance.created_at:
+            instance.created_at = timezone.now()
+        if not instance.created_by and current_user and not isinstance(current_user, AnonymousUser):
+            instance.created_by = current_user
+    
+    # Sempre atualizar updated_at e updated_by
+    if hasattr(instance, 'updated_at'):
+        instance.updated_at = timezone.now()
+    if current_user and not isinstance(current_user, AnonymousUser):
+        instance.updated_by = current_user
