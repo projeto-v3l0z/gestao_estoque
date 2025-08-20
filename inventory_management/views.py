@@ -422,19 +422,17 @@ class ProductUnitCreateView(PermissionRequiredMixin, CreateView):
 class ProductCreateView(PermissionRequiredMixin, CreateView):
     model = Product
     template_name = 'product_create.html'
-    form_class = ProductCreateForm
+    form_class =ProductCreateForm
     permission_required = 'inventory_management.add_product'
     success_url = reverse_lazy('inventory_management:product_list')  
 
     def form_valid(self, form):
-        # Capturar o usuário atual do middleware
-        from .middleware import get_current_user
-        current_user = get_current_user()
+        # Verificar se o usuário existe e é válido antes de usar
+        valid_user = get_valid_user(self.request.user)
         
-        # Definir campos de usuário
-        form.instance.created_by = current_user
-        form.instance.updated_by = current_user
-        
+        form.instance.created_by = valid_user
+        form.instance.updated_by = valid_user
+
         return super().form_valid(form)
 
 class ProductUpdateView(UpdateView):
@@ -447,14 +445,17 @@ class ProductUpdateView(UpdateView):
         return get_object_or_404(Product, id=product_id)
 
     def form_valid(self, form):
-        # Capturar o usuário atual do middleware
-        from .middleware import get_current_user
-        current_user = get_current_user()
+        # Salvando o produto com os novos dados
+        product = form.save(commit=False)
         
-        # Definir campo de usuário para atualização
-        form.instance.updated_by = current_user
+        # Verificar se o usuário existe e é válido antes de usar
+        valid_user = get_valid_user(self.request.user)
+        product.updated_by = valid_user
         
-        return super().form_valid(form)
+        product.save()
+
+        # Redireciona para a página de detalhes do produto após a edição
+        return redirect('inventory_management:product_list')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

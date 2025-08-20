@@ -60,7 +60,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'inventory_management.middleware.CurrentUserMiddleware',  # Middleware para capturar usuário atual
 ]
 
 ROOT_URLCONF = 'gestao_estoque.urls'
