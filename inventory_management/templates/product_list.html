@@ -57,7 +57,9 @@
                         <td>{{ product.quantity }}</td>
                         <td>
                             <a href="{% url 'inventory_management:product_detail' product.slug %}" class="btn btn-info btn-sm">Ver Detalhes</a>
+                            {% if user|has_perm:"inventory_management.change_product" %}
                             <a href="{% url 'inventory_management:product_edit' product.id %}" class="btn btn-warning btn-sm ml-2">Editar</a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}
