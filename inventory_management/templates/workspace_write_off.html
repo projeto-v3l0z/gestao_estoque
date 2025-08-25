@@ -56,7 +56,7 @@
         </table>
         <div class="col-12 g-3">
             <div class="row justify-content-center align-items-center">
-                {% if can_write_off %}
+                {% if user|has_perm:"inventory_management.can_recomission" %}
                 <div class="col-md-4 col-12 mb-2">
                     <button type="button"
                         class="btn btn-warning w-100 {% if object_list %} {% else %} disabled {% endif %} "

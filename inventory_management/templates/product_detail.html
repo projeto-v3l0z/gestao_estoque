@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% load iam_tags static %}
 {% block content %}
 {% if user.is_authenticated %}
 <div class="container-fluid px-2">
@@ -18,7 +18,9 @@
                     </div>
                     {% endif %}
                     <div class="d-flex justify-content-between mt-2">
+                        {% if user|has_perm:"inventory_management.add_product" %}
                         <a href="{% url 'inventory_management:product_unit_create' %}" class="btn btn-sm btn-success">Adicionar Unidade</a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
