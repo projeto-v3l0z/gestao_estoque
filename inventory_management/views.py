@@ -723,7 +723,7 @@ def get_qr_size(size_preset):
 class WorkSpaceWriteOffView(PermissionRequiredMixin ,ListView):
     template_name = 'workspace_write_off.html'
     model = WorkSpace
-    permission_required = 'inventory_management.view_workspace'
+    permission_required = 'inventory_management.can_view_workspace_write_off'
 
     def get_queryset(self):
         queryset = super().get_queryset()
