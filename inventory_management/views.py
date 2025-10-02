@@ -1366,7 +1366,7 @@ class UploadExcelView(View):
         
 def logout_view(request):
     logout(request)
-    return redirect('admin:login')
+    return redirect('inventory_management:index')
 
 class ProductUnitListView(LoginRequiredMixin, ListView):
     model = ProductUnit
