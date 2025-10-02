@@ -1372,7 +1372,22 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
     model = ProductUnit
     template_name = 'product_unit_list.html'
     context_object_name = 'product_units'
-    paginate_by = 10
+
+    def get_paginate_by(self, queryset):
+        page_size = self.request.GET.get('page_size')
+        total_items = queryset.count()
+
+        if page_size:
+            if page_size.lower() == 'all':
+                return total_items or None
+            try:
+                size = int(page_size)
+                if size > 0:
+                    return size
+            except ValueError:
+                pass
+
+        return total_items or None
 
     def get_queryset(self):
         queryset = super().get_queryset()

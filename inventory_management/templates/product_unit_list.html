@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load query_transform %}
 {% load iam_tags static %}
 {% block extra_styles %}
 {{ form.media.css }}
@@ -155,45 +154,6 @@
         </div>
         {% endif %}
     </div>
-    {% if page_obj.paginator.num_pages > 1 %}
-    <div class="row justify-content-center mt-4">
-        <nav aria-label="Page navigation">
-            <ul class="pagination">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?{% query_transform request page=1 %}">Primeira</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link"
-                        href="?{% query_transform request page=page_obj.previous_page_number %}">Anterior</a>
-                </li>
-                {% endif %}
-
-                {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                <li class="page-item active">
-                    <a class="page-link" href="?{% query_transform request page=num %}">{{ num }}</a>
-                </li>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <li class="page-item">
-                    <a class="page-link" href="?{% query_transform request page=num %}">{{ num }}</a>
-                    </li>
-                    {% endif %}
-                    {% endfor %}
-
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link"
-                            href="?{% query_transform request page=page_obj.next_page_number %}">Próxima</a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link"
-                            href="?{% query_transform request page=page_obj.paginator.num_pages %}">Última</a>
-                    </li>
-                    {% endif %}
-            </ul>
-        </nav>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}
 {% block extra_scripts %}
