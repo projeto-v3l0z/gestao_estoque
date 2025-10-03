@@ -47,7 +47,6 @@ class ProductListView(PermissionRequiredMixin, ListView):
     paginate_by = 10
     permission_required = 'inventory_management.view_product'
 
-
     def get_queryset(self):
         queryset = super().get_queryset()
         products = self.request.GET.getlist('name', None)
@@ -60,6 +59,40 @@ class ProductListView(PermissionRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = FilterProductForm(self.request.GET or None)
+        
+        products_on_page = context['page_obj'].object_list
+        
+        products_for_template = []
+        for product in products_on_page:
+            all_units = product.productunit_set.all()
+            correct_units = all_units.filter(write_off=False, is_divided=False)
+            written_off_units = all_units.filter(write_off=True)
+            divided_source_units = all_units.filter(is_divided=True)
+
+            info = {'product': product}
+
+            if product.measure == 'u':
+                unit_str = " un"
+                info['total'] = f"{all_units.count()}{unit_str}"
+                info['correct'] = f"{correct_units.count()}{unit_str}"
+                info['written_off'] = f"{written_off_units.count()}{unit_str}"
+                info['divided'] = f"{divided_source_units.count()}{unit_str}"
+            else:
+                unit_str = ' m' if product.measure in ['m', 'cm'] else ' kg'
+                
+                total_q = all_units.aggregate(s=Sum('weight_length'))['s'] or Decimal('0')
+                correct_q = correct_units.aggregate(s=Sum('weight_length'))['s'] or Decimal('0')
+                written_off_q = written_off_units.aggregate(s=Sum('weight_length'))['s'] or Decimal('0')
+                divided_q = divided_source_units.aggregate(s=Sum('weight_length'))['s'] or Decimal('0')
+
+                info['total'] = f"{total_q:.2f}{unit_str}"
+                info['correct'] = f"{correct_q:.2f}{unit_str}"
+                info['written_off'] = f"{written_off_q:.2f}{unit_str}"
+                info['divided'] = f"{divided_q:.2f}{unit_str}"
+
+            products_for_template.append(info)
+
+        context['products_for_debug'] = products_for_template
         return context
 
 
@@ -80,7 +113,7 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
         shelf_id = self.request.GET.get('shelf')
         search = self.request.GET.get('search')
 
-        product_units = product.productunit_set.all()
+        product_units = product.productunit_set.filter(write_off=False, is_divided=False)
 
         if prd_code:  # Aplicar filtro por código do produto
             product_units = product_units.filter(code__icontains=prd_code)
@@ -123,10 +156,14 @@ class ProductDetailView(PermissionRequiredMixin, DetailView):
 class ProductUnitDetailView(DetailView):
     model = ProductUnit
     template_name = 'product_unit_detail.html'
-    # permission_required = 'inventory_management.view_productunit'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        unit = self.get_object()
+        if unit.write_off or unit.is_divided:
+            context['available_weight_length'] = 0
+        else:
+            context['available_weight_length'] = unit.weight_length
         context['storage_types'] = StorageType.objects.exclude(name__in=["Baixa"])
         context['buildings'] = Building.objects.all()
         context['rooms'] = Rooms.objects.all()
