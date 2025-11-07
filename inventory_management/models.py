@@ -223,6 +223,9 @@ class ProductUnit(models.Model):
         verbose_name_plural = "Unidades de Produto"
         verbose_name = "Unidade de Produto"
         ordering = ['write_off', 'purchase_date', 'product']
+        permissions = [
+            ("can_generate_qr_code", "Can generate QR code"),
+        ]
 
     def get_absolute_url(self):
         return reverse('inventory_management:product_unit_detail', kwargs={'product_slug':self.product.slug, 'slug': self.slug})
