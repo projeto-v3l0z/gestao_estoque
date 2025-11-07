@@ -1378,6 +1378,22 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
     template_name = 'product_unit_list.html'
     context_object_name = 'product_units'
     paginate_by = 10
+    page_size_options = [10, 20, 50, 100]
+
+    def get_paginate_by(self, queryset):
+        page_size = self.request.GET.get('page_size')
+
+        if page_size:
+            try:
+                size = int(page_size)
+            except (TypeError, ValueError):
+                size = self.paginate_by
+            else:
+                if size not in self.page_size_options:
+                    size = self.paginate_by
+            self.paginate_by = size
+
+        return self.paginate_by
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -1412,6 +1428,11 @@ class ProductUnitListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['form'] = FilterProductUnitForm(self.request.GET or None)
         context['locations'] = StorageType.objects.exclude(name__in=["Baixa"])
+        params = self.request.GET.copy()
+        params.pop('page', None)
+        context['query_string'] = params.urlencode()
+        context['current_page_size'] = self.paginate_by
+        context['page_size_options'] = self.page_size_options
         return context
 
 class ProductAutoComplete(View):
