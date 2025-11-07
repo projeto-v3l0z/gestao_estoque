@@ -44,27 +44,33 @@
                         <th>Nome</th>
                         <th>Preço</th>
                         <th>Medida</th>
-                        <th>Qtd Unidades</th>
+                        <th>Estoque Correto</th>
+                        <th>Baixados</th>
+                        <th>Dividido (Origem)</th>
+                        <th>Total Bruto</th>
                         <th>Detalhes</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for product in products %}
+                    {% for item in products_for_debug %}
                     <tr>
-                        <td>{{ product.name|title }}</td>
-                        <td>R$ {{ product.price }}</td>
-                        <td>{{ product.get_measure }}</td>
-                        <td>{{ product.quantity }}</td>
+                        <td>{{ item.product.name|title }}</td>
+                        <td>R$ {{ item.product.price }}</td>
+                        <td>{{ item.product.get_measure }}</td>
+                        <td><b>{{ item.correct }}</b></td>
+                        <td>{{ item.written_off }}</td>
+                        <td>{{ item.divided }}</td>
+                        <td>{{ item.total }}</td>
                         <td>
-                            <a href="{% url 'inventory_management:product_detail' product.slug %}" class="btn btn-info btn-sm">Ver Detalhes</a>
+                            <a href="{% url 'inventory_management:product_detail' item.product.slug %}" class="btn btn-info btn-sm">Ver Detalhes</a>
                             {% if user|has_perm:"inventory_management.change_product" %}
-                            <a href="{% url 'inventory_management:product_edit' product.id %}" class="btn btn-warning btn-sm ml-2">Editar</a>
+                            <a href="{% url 'inventory_management:product_edit' item.product.id %}" class="btn btn-warning btn-sm ml-2">Editar</a>
                             {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center">Nenhum produto encontrado.</td>
+                        <td colspan="8" class="text-center">Nenhum produto encontrado.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
