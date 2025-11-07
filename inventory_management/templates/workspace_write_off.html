@@ -167,89 +167,121 @@
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    let qrCodeReadingActive = true;
+    // Scanner control: allow consecutive scans but avoid concurrent requests
+    let processingScan = false;
 
-    function onScanSuccess(decodedText, decodedResult) {
-        console.log("onScanSuccess called");
-        if (!qrCodeReadingActive) return;
-
-        qrCodeReadingActive = false;
-
-        var url = decodedText;
-        console.log("Decoded URL:", url);
-
-        var match = url.match(/prd-\d+/i);
-        console.log("Regex match result:", match);
-
-        if (match) {
-            var product_id = match[0];
-            console.log("Product ID:", product_id);
-
-            $.ajax({
-                type: 'POST',
-                data: {
-                    "product_id": product_id,
-                    'csrfmiddlewaretoken': '{{ csrf_token }}'
-                },
-                success: function (response) {
-                    if (response.success) {
-                        if (response.reload) {
-                            //alert(response.success);
-                            location.reload();
-                        }
-                        if (response.transfer) {
-                            var response = JSON.parse(response);
-                            alert(response);
-                            location.reload();
-                        }
-                    }
-                },
-                error: function (xhr, errmsg, err) {
-                    console.log(xhr.status + ": " + xhr.responseText);
-                    var response = JSON.parse(xhr.responseText);
-                    var errorMessage = response.error;
-                    alert(errorMessage);
-                    location.reload();
-                },
+    // Save current table form state to localStorage so reloads don't lose user input
+    function saveFormState() {
+        try {
+            const items = [];
+            $('#itens tbody tr').each(function () {
+                const qtyInput = $(this).find('input[name="quantity"]');
+                const locSelect = $(this).find('select[name="location"]');
+                if (qtyInput.length) {
+                    items.push({
+                        productid: qtyInput.data('productid'),
+                        quantity: qtyInput.val(),
+                        location: locSelect.val()
+                    });
+                }
             });
-        } else {
-            alert("Código do produto não encontrado.");
+            localStorage.setItem('workspace_form_state', JSON.stringify(items));
+        } catch (e) {
+            console.error('Failed to save form state', e);
         }
     }
 
-    $(document).ready(function () {
-        $('form').submit(function (event) {
-            event.preventDefault();
-
-            var formData = $(this).serialize();
-            console.log("Form Data:", formData);  // Debug: Print form data
-
-            $.ajax({
-                type: 'POST',
-                data: formData,
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        if (response.reload) {
-                            location.reload();
-                        }
-                    } else {
-                        console.log(response.error);
-                    }
-                },
-                error: function (xhr, errmsg, err) {
-                    console.log(xhr.status + ": " + xhr.responseText);
-                },
+    // Restore saved state (if any) and keep it until user submits or it is restored
+    function restoreFormState() {
+        try {
+            const raw = localStorage.getItem('workspace_form_state');
+            if (!raw) return;
+            const items = JSON.parse(raw);
+            items.forEach(function (it) {
+                // find input by data-productid
+                const input = $('#itens').find('input[data-productid="' + it.productid + '"]');
+                if (input.length) {
+                    input.val(it.quantity);
+                    // try to set corresponding select in the same row
+                    const select = input.closest('tr').find('select[name="location"]');
+                    if (select.length) select.val(it.location);
+                }
             });
+            // remove saved state after restore so it doesn't persist erroneously
+            localStorage.removeItem('workspace_form_state');
+        } catch (e) {
+            console.error('Failed to restore form state', e);
+        }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        console.log('onScanSuccess called');
+        if (processingScan) return; // avoid concurrent requests
+        processingScan = true;
+
+        var url = decodedText;
+        console.log('Decoded URL:', url);
+
+        var match = url.match(/prd-\d+/i);
+        console.log('Regex match result:', match);
+
+        if (!match) {
+            alert('Código do produto não encontrado.');
+            processingScan = false;
+            return;
+        }
+
+        var product_id = match[0];
+        console.log('Product ID:', product_id);
+
+        $.ajax({
+            type: 'POST',
+            data: {
+                'product_id': product_id,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function (response) {
+                // If server asks for reload, preserve current inputs first
+                if (response && response.reload) {
+                    saveFormState();
+                    // allow server-driven reload
+                    location.reload();
+                    return;
+                }
+
+                // handle other server responses as before
+                if (response && response.success) {
+                    // if server returns HTML or data to update the table, we could append it here
+                    // for now, just log and allow further scans
+                    console.log('Scan handled:', response);
+                }
+                processingScan = false;
+            },
+            error: function (xhr, errmsg, err) {
+                console.log(xhr.status + ': ' + xhr.responseText);
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    var errorMessage = response.error;
+                    alert(errorMessage);
+                } catch (e) {
+                    // non-json error
+                }
+                processingScan = false;
+            }
         });
-    });
+    }
 
     function onScanFailure(error) {
         console.warn(`Code scan error = ${error}`);
     }
 
+    // restore any saved inputs as soon as possible
+    $(document).ready(function () {
+        restoreFormState();
+    });
+
     let html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader",
+        'reader',
         { fps: 10, qrbox: { width: 250, height: 250 } },  /* verbose= */ false);
 
     html5QrcodeScanner.render(onScanSuccess, onScanFailure);

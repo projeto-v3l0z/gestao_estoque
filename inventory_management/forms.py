@@ -77,7 +77,7 @@ class ProductCreateForm(forms.ModelForm):
 
 class FilterProductUnitForm(forms.Form):
     product = forms.ModelChoiceField(widget=ProductMultipleWidget(attrs={'class': 'form-control'}), required=False, label="Produto", queryset=Product.objects.none())
-    code = forms.CharField(max_length=100, required=False, label="Código", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Código'}))
+    code = forms.CharField(max_length=100, required=False, label="PRD", widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'PRD-00'}))
     location = forms.ModelChoiceField(queryset=StorageType.objects.all(), required=False, label="Localização", widget=forms.Select(attrs={'class': 'form-control'}))
     created_at = forms.DateField(required=False, label="Data de Criação", widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
 
