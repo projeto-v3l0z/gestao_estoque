@@ -35,6 +35,8 @@ from reportlab.lib.utils import simpleSplit
 from django.contrib.auth import logout
 from django.db.models import Q
 from django_select2.views import AutoResponseView
+from django.db.models import IntegerField
+from django.db.models.functions import Cast, Substr
 
 
 class IndexView(LoginRequiredMixin, TemplateView):
@@ -508,7 +510,10 @@ def generate_product_unit_qr_codes(request):
 
         if selected_items and size_preset:
             selected_item_ids = selected_items
-            queryset = ProductUnit.objects.filter(id__in=selected_item_ids)
+            # Ordenação numérica pelo número do código (extrai o número após PRD-)
+            queryset = ProductUnit.objects.filter(id__in=selected_item_ids).annotate(
+                code_number=Cast(Substr('code', 5), IntegerField())
+            ).order_by('code_number')
 
             qr_codes = []
             for item in queryset:
