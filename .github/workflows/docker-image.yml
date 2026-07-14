@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v*.*.*"
 
   pull_request:
     branches:
@@ -21,7 +19,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  IMAGE_NAME: ${{ vars.DOCKERHUB_USERNAME }}/gestao-estoque
+  # Único repositório privado compartilhado pelas aplicações.
+  IMAGE_NAME: velozacademy/ecossistema_veloz
+
+  # Tag exclusiva desta aplicação.
+  IMAGE_TAG: gestao-estoque
 
 jobs:
   docker:
@@ -42,30 +44,19 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Generate Docker metadata
-        id: metadata
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=sha-
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
 
-          # Pull requests validam o build, mas não publicam a imagem.
+          # Pull requests somente validam o build.
           push: ${{ github.event_name != 'pull_request' }}
 
+          # O servidor Dokploy é linux/x86_64.
           platforms: linux/amd64
 
-          tags: ${{ steps.metadata.outputs.tags }}
-          labels: ${{ steps.metadata.outputs.labels }}
+          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
           cache-from: type=gha
           cache-to: type=gha,mode=max
