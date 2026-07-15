@@ -1,0 +1,22 @@
+[project]
+name = "gestao-estoque"
+version = "0.1.0"
+description = "Gestão de Estoque — Django inventory management system"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "Django==5.0.1",
+    "django-jazzmin==3.0.0",
+    "django-select2==8.3.0",
+    "gunicorn==21.2.0",
+    "mysqlclient==2.2.4",
+    "openpyxl==3.1.5",
+    "pandas==2.2.2",
+    "pillow==10.4.0",
+    "python-dotenv==1.0.1",
+    "qrcode==7.4.2",
+    "reportlab==4.1.0",
+    "whitenoise==6.7.0",
+]
+
+[tool.uv]
+package = false

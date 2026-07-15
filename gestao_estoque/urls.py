@@ -1,7 +1,7 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, re_path, include
 from django.conf import settings
-from django.conf.urls.static import static
+from django.views.static import serve
 
 
 urlpatterns = [
@@ -11,5 +11,9 @@ urlpatterns = [
     path('select2/', include('django_select2.urls')),
 ]
 
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+# Static files are served by WhiteNoise (see MIDDLEWARE). Media uploads have
+# no equivalent, so Django serves them directly here regardless of DEBUG —
+# fine for this app's low traffic; move to object storage if that changes.
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+]
