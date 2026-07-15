@@ -72,8 +72,8 @@ USER app
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/')" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD python -c "import socket; s = socket.create_connection(('127.0.0.1', 8000), 5); s.close()" || exit 1
 
 # Traefik (managed by Dokploy) reverse-proxies to this port directly —
 # no in-image nginx/static server needed.
