@@ -60,3 +60,15 @@ jobs:
 
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    name: Trigger Dokploy redeploy
+    needs: docker
+    runs-on: ubuntu-latest
+
+    # Só re-implanta em push real para main (ou disparo manual), nunca em PR.
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Call Dokploy deploy webhook
+        run: curl --fail --silent --show-error -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
